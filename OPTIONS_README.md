@@ -75,7 +75,7 @@ This document provides a comprehensive reference for all available configuration
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | `DIRECT_TEXT_SEARCH_COLUMNS` | array | `[]` | Columns for direct text search | `['name', 'email']` |
-| `RELATED_TEXT_SEARCH_COLUMNS` | array | `[]` | Related model columns for text search | `['department_name', 'profil_.bio']` |
+| `RELATED_TEXT_SEARCH_COLUMNS` | array | `[]` | Related model columns for text search | `['department_name', 'profil_bio']` |
 | `ENABLE_FULLTEXT_SEARCH` | bool | `false` | Enable full-text search | `true` |
 | `FULLTEXT_SEARCH_COLUMNS` | array | `[]` | Columns for full-text search | `['title', 'content']` |
 
