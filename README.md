@@ -193,50 +193,29 @@ class UserController extends Controller
 | `sort_by` | string | Column to sort by | `?sort_by=name` |
 | `sort_direction` | string | Sort direction (asc/desc) | `?sort_direction=desc` |
 | `{column}` | mixed | Direct column filter | `?status=active` |
-| `filters[{column}]` | mixed | Advanced column filter | `?filters[status]=active` |
-| `filters[{column}][from]` | date | Date range from | `?filters[created_at][from]=2024-01-01` |
-| `filters[{column}][to]` | date | Date range to | `?filters[created_at][to]=2024-12-31` |
+| `{related_column}` | mixed | Related column filter | `?department_name=Engineering` |
 | `export` | string | Export format (csv/json) | `?export=csv` |
 | `search_suggestions` | string | Get search suggestions | `?search_suggestions=john&limit=5` |
 
-**Note:** Relationships are loaded via the `$withRelations` parameter in code, not URL parameters:
+**Note:** 
+- **Relationships** are loaded via the `$withRelations` parameter in code, not URL parameters
+- **Advanced filtering** with operators is done in code using associative arrays, not URL parameters
+
 ```php
 // Load relationships in code
 $users = $userService->findAll($filters, ['department', 'profile']);
 $user = $userService->findById($id, ['department', 'posts']);
+
+// Advanced filtering in code
+$users = $userService->findAll([
+    'age' => ['operator' => 'gte', 'value' => 25],
+    'salary' => ['operator' => 'between', 'value' => [50000, 100000]]
+]);
 ```
 
 ## 🔍 Advanced Filtering System
 
 Cruder provides a powerful and secure filtering system that supports both direct column filtering and related model filtering.
-
-### Direct Column Filtering
-
-Direct column filtering allows you to filter by columns directly on the main model:
-
-```php
-// In your service class
-protected const DIRECT_FILTERABLE_COLUMNS = [
-    'status', 'department_id', 'role', 'created_at'
-];
-
-// Usage via URL parameters
-GET /users?status=active&department_id=1&role=admin
-```
-
-### Related Column Filtering
-
-Related column filtering allows you to filter by columns on related models:
-
-```php
-// In your service class
-protected const RELATED_FILTERABLE_COLUMNS = [
-    'department_name', 'profile_age', 'company_location'
-];
-
-// Usage via URL parameters
-GET /users?filters[department_name]=Engineering&filters[profile_age][min]=25
-```
 
 ### Advanced Filtering Examples
 
@@ -247,10 +226,12 @@ protected const DIRECT_FILTERABLE_COLUMNS = [
     'status', 'department_id', 'role', 'is_active'
 ];
 
-// URL examples
-GET /users?status=active
-GET /users?department_id=1&role=admin
-GET /users?is_active=true&status=active
+// Code usage
+$users = $userService->findAll([
+    'status' => 'active',
+    'department_id' => 1,
+    'role' => 'admin'
+]);
 ```
 
 #### 2. Related Model Filtering
@@ -260,38 +241,74 @@ protected const RELATED_FILTERABLE_COLUMNS = [
     'department_name', 'department_location', 'profile_age', 'company_size'
 ];
 
-// URL examples
-GET /users?filters[department_name]=Engineering
-GET /users?filters[department_location]=New York
-GET /users?filters[profile_age][min]=25&filters[profile_age][max]=65
-GET /users?filters[company_size]=large
+// Code usage
+$users = $userService->findAll([
+    'department_name' => 'Engineering',
+    'profile_age' => 25
+]);
 ```
 
-#### 3. Date Range Filtering
+#### 3. Advanced Filtering with Operators
 ```php
 // Service configuration
 protected const DIRECT_FILTERABLE_COLUMNS = [
-    'created_at', 'updated_at', 'last_login_at'
+    'age', 'salary', 'created_at', 'status', 'name'
 ];
 
-// URL examples
-GET /users?filters[created_at][from]=2024-01-01
-GET /users?filters[created_at][to]=2024-12-31
-GET /users?filters[last_login_at][from]=2024-01-01&filters[last_login_at][to]=2024-01-31
+// Code usage with advanced operators
+$users = $userService->findAll([
+    // Numeric comparisons
+    'age' => ['operator' => 'gte', 'value' => 25],
+    'salary' => ['operator' => 'between', 'value' => [50000, 100000]],
+    
+    // Date filtering
+    'created_at' => ['operator' => 'gte', 'value' => '2024-01-01'],
+    
+    // Text filtering
+    'name' => ['operator' => 'like', 'value' => '%John%'],
+    'status' => ['operator' => 'in', 'value' => ['active', 'pending']],
+    
+    // Null checks
+    'deleted_at' => ['operator' => 'is_null', 'value' => null]
+]);
 ```
 
-#### 4. Numeric Range Filtering
+**Advanced Filtering Structure:**
+Advanced filtering uses associative arrays with two required keys:
+- `operator`: The comparison operator to use
+- `value`: The value to compare against
+
 ```php
-// Service configuration
-protected const DIRECT_FILTERABLE_COLUMNS = [
-    'age', 'salary', 'experience_years'
-];
+// Basic structure
+'column_name' => [
+    'operator' => 'gte',        // Required: comparison operator
+    'value' => 25              // Required: comparison value
+]
 
-// URL examples
-GET /users?filters[age][min]=25&filters[age][max]=65
-GET /users?filters[salary][gte]=50000&filters[salary][lte]=100000
-GET /users?filters[experience_years][gt]=5
+// Examples
+'age' => ['operator' => 'gte', 'value' => 25]
+'name' => ['operator' => 'like', 'value' => '%john%']
+'status' => ['operator' => 'in', 'value' => ['active', 'pending']]
+'price' => ['operator' => 'between', 'value' => [100, 500]]
 ```
+
+#### 4. Available Advanced Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `gte` | Greater than or equal | `['operator' => 'gte', 'value' => 25]` |
+| `gt` | Greater than | `['operator' => 'gt', 'value' => 100]` |
+| `lte` | Less than or equal | `['operator' => 'lte', 'value' => 65]` |
+| `lt` | Less than | `['operator' => 'lt', 'value' => 1000]` |
+| `like` | LIKE pattern matching | `['operator' => 'like', 'value' => '%john%']` |
+| `not_like` | NOT LIKE pattern matching | `['operator' => 'not_like', 'value' => '%admin%']` |
+| `in` | IN array | `['operator' => 'in', 'value' => [1, 2, 3]]` |
+| `not_in` | NOT IN array | `['operator' => 'not_in', 'value' => [4, 5, 6]]` |
+| `between` | BETWEEN two values | `['operator' => 'between', 'value' => [100, 500]]` |
+| `not_between` | NOT BETWEEN two values | `['operator' => 'not_between', 'value' => [0, 50]]` |
+| `is_null` | IS NULL | `['operator' => 'is_null', 'value' => null]` |
+| `is_not_null` | IS NOT NULL | `['operator' => 'is_not_null', 'value' => null]` |
+
 
 ### Complete Filtering Example
 
@@ -340,42 +357,6 @@ class UserService extends BaseCrudService
 }
 ```
 
-### Real-World Filtering Use Cases
-
-#### E-commerce Product Filtering
-```php
-// ProductService configuration
-protected const DIRECT_FILTERABLE_COLUMNS = [
-    'category_id', 'brand_id', 'price', 'in_stock', 'status', 'created_at'
-];
-
-protected const RELATED_FILTERABLE_COLUMNS = [
-    'category_name', 'brand_name', 'reviews_rating'
-];
-
-// URL examples
-GET /products?category_id=1&in_stock=true&status=active
-GET /products?filters[price][min]=100&filters[price][max]=500
-GET /products?filters[category_name]=Electronics&filters[brand_name]=Apple
-GET /products?filters[reviews_rating][gte]=4.0
-```
-
-#### User Management Filtering
-```php
-// UserService configuration
-protected const DIRECT_FILTERABLE_COLUMNS = [
-    'role', 'status', 'department_id', 'created_at', 'last_login_at'
-];
-
-protected const RELATED_FILTERABLE_COLUMNS = [
-    'department_name', 'profile_age', 'company_location'
-];
-
-// URL examples
-GET /users?role=admin&status=active
-GET /users?filters[department_name]=Engineering&filters[profile_age][min]=25
-GET /users?filters[last_login_at][from]=2024-01-01&filters[company_location]=New York
-```
 
 ### Security Features
 
@@ -420,38 +401,155 @@ PUT /users/1
 DELETE /users/1
 ```
 
-### Real-World Examples
 
-#### 🛒 E-commerce Product Management
+## 🔧 Overridable Methods
+
+Cruder provides several protected methods that can be overridden in child service classes to customize behavior:
+
+### Data Preparation Methods
+
+#### `prepareCreateData(array $data): array`
+Called before creating a record to modify the data array.
 
 ```php
-// Get products with advanced filters
-GET /products?category_id=1&price_min=100&price_max=500&in_stock=true&sort_by=price&sort_direction=asc
-
-// Search products with multiple criteria
-GET /products?search=laptop&category_id=electronics&brand_id=2&status=active
-
-// Export product catalog
-GET /products?export=csv&filters[category_id]=1
-
-// Get product suggestions
-GET /products?search_suggestions=laptop&limit=10
+protected function prepareCreateData(array $data): array
+{
+    // Add custom logic before creating
+    $data['custom_field'] = 'custom_value';
+    $data['slug'] = Str::slug($data['name']);
+    
+    // Call parent to maintain audit trail
+    return parent::prepareCreateData($data);
+}
 ```
 
-#### 👥 User Management Dashboard
+#### `prepareUpdateData(array $data): array`
+Called before updating a record to modify the data array.
 
 ```php
-// Get users with pagination and sorting
-GET /users?page=1&limit=20&sort_by=created_at&sort_direction=desc
+protected function prepareUpdateData(array $data): array
+{
+    // Add custom logic before updating
+    if (isset($data['name'])) {
+        $data['slug'] = Str::slug($data['name']);
+    }
+    
+    // Call parent to maintain audit trail
+    return parent::prepareUpdateData($data);
+}
+```
 
-// Filter active users by department
-GET /users?filters[status]=active&filters[department_id]=2
+#### `prepareDeleteData(Model $model): Model`
+Called before deleting a record to modify the model.
 
-// Search users by name or email
-GET /users?search=john
+```php
+protected function prepareDeleteData(Model $model): Model
+{
+    // Add custom logic before deleting
+    $model->deleted_reason = 'User requested deletion';
+    
+    // Call parent to maintain audit trail
+    return parent::prepareDeleteData($model);
+}
+```
 
-// Get users with relationships (via withRelations parameter in code)
-$users = $userService->findAll($filters, ['department', 'profile']);
+### Query Customization Methods
+
+#### `applyCustomQueryConstraints(Builder $query, array $filters): void`
+Override to add custom query constraints that are applied to all queries. This method is called after all standard filters are applied.
+
+```php
+protected function applyCustomQueryConstraints(Builder $query, array $filters): void
+{
+    // Add custom WHERE clauses
+    $query->where('status', '!=', 'archived');
+    
+    // Add custom joins
+    $query->leftJoin('user_permissions', 'users.id', '=', 'user_permissions.user_id');
+    
+    // Add custom conditions based on user role
+    if (Auth::user()->role !== 'admin') {
+        $query->where('users.visible', true);
+    }
+    
+    // Add custom conditions based on filters
+    if (isset($filters['custom_condition'])) {
+        $query->where('custom_field', $filters['custom_condition']);
+    }
+}
+```
+
+**When to Use:**
+- Add global query constraints that apply to all operations
+- Implement business logic that affects all queries
+- Add custom joins or subqueries
+- Apply user-specific filtering based on permissions or roles
+
+### Data Transformation Methods
+
+#### `transformResponse($data, array $filters = []): mixed`
+Override to transform the response data before returning it.
+
+```php
+protected function transformResponse($data, array $filters = []): mixed
+{
+    // Transform collection data
+    if ($data instanceof Collection) {
+        return $data->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'formatted_created_at' => $item->created_at->format('Y-m-d H:i:s'),
+                'custom_field' => $this->calculateCustomField($item)
+            ];
+        });
+    }
+    
+    // Transform single model
+    if ($data instanceof Model) {
+        return [
+            'id' => $data->id,
+            'name' => $data->name,
+            'custom_data' => $this->getCustomData($data)
+        ];
+    }
+    
+    return $data;
+}
+```
+
+### Cache Management Methods
+
+#### `getCacheTags(): array`
+Override to customize cache tags for better cache invalidation.
+
+```php
+protected function getCacheTags(): array
+{
+    return [
+        'users',
+        'user_' . Auth::id(),
+        'department_' . $this->getCurrentDepartmentId()
+    ];
+}
+```
+
+### Service Configuration Methods
+
+#### `configureServices(): void`
+Override to customize service configurations.
+
+```php
+protected function configureServices(): void
+{
+    parent::configureServices();
+    
+    // Add custom export strategy
+    $this->exportService->addStrategy('excel', new ExcelExportStrategy());
+    
+    // Add custom search strategy
+    $this->searchService->addStrategy('elasticsearch', new ElasticsearchStrategy());
+}
 ```
 
 ## 🔍 Feature Deep Dive
