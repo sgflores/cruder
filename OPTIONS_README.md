@@ -61,30 +61,72 @@ This document provides a comprehensive reference for all available configuration
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | `DIRECT_FILTERABLE_COLUMNS` | array | `[]` | Columns that can be filtered directly | `['status', 'department_id']` |
-| `RELATION_FILTERABLE_COLUMNS` | array | `[]` | Related model columns for filtering | `['department.name', 'profile.age']` |
+| `RELATED_FILTERABLE_COLUMNS` | array | `[]` | Related model columns for filtering | `['department.name', 'profile.age']` |
+
+#### Filtering Examples
+
+**Direct Column Filtering:**
+```php
+// Service configuration
+protected const DIRECT_FILTERABLE_COLUMNS = [
+    'status', 'role', 'department_id', 'is_active', 'created_at'
+];
+
+// URL usage
+GET /users?status=active&role=admin&department_id=1
+GET /users?is_active=true&status=active
+```
+
+**Related Column Filtering:**
+```php
+// Service configuration
+protected const RELATED_FILTERABLE_COLUMNS = [
+    'department_name', 'department_location', 'profile_age', 'company_size'
+];
+
+// URL usage
+GET /users?filters[department_name]=Engineering
+GET /users?filters[department_location]=New York
+GET /users?filters[profile_age][min]=25&filters[profile_age][max]=65
+GET /users?filters[company_size]=large
+```
+
+**Advanced Range Filtering:**
+```php
+// Date range filtering
+GET /users?filters[created_at][from]=2024-01-01&filters[created_at][to]=2024-12-31
+
+// Numeric range filtering
+GET /users?filters[salary][gte]=50000&filters[salary][lte]=100000
+GET /users?filters[age][min]=25&filters[age][max]=65
+
+// Comparison operators
+GET /users?filters[experience_years][gt]=5
+GET /users?filters[last_login_at][lt]=2024-01-01
+```
 
 ### Sorting Configuration
 
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | `DIRECT_SORTABLE_COLUMNS` | array | `[]` | Columns that can be sorted directly | `['name', 'created_at']` |
-| `RELATION_SORTABLE_COLUMNS` | array | `[]` | Related model columns for sorting | `['department.name', 'profile.created_at']` |
+| `RELATED_SORTABLE_COLUMNS` | array | `[]` | Related model columns for sorting | `['department.name', 'profile.created_at']` |
 
 ### Search Configuration
 
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | `DIRECT_TEXT_SEARCH_COLUMNS` | array | `[]` | Columns for direct text search | `['name', 'email']` |
-| `RELATION_TEXT_SEARCH_COLUMNS` | array | `[]` | Related model columns for text search | `['department.name', 'profile.bio']` |
-| `SEARCH_STRATEGY` | string | `'like'` | Default search strategy | `'fulltext'` |
+| `RELATED_TEXT_SEARCH_COLUMNS` | array | `[]` | Related model columns for text search | `['department.name', 'profile.bio']` |
+| `ENABLE_FULLTEXT_SEARCH` | bool | `false` | Enable full-text search | `true` |
+| `FULLTEXT_SEARCH_COLUMNS` | array | `[]` | Columns for full-text search | `['title', 'content']` |
 
 ### Pagination Configuration
 
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | `PAGINATE_PARAM` | string | `'page'` | URL parameter for pagination | `'page'` |
-| `LIMIT_PARAM` | string | `'per_page'` | URL parameter for limit | `'limit'` |
-| `DEFAULT_PAGE_SIZE` | int | `15` | Default number of records per page | `20` |
+| `LIMIT_PARAM` | string | `'limit'` | URL parameter for limit | `'limit'` |
 
 ## ✅ Validation Configuration
 
@@ -149,9 +191,6 @@ protected const UPDATE_VALIDATION_RULES = [
 | Option | Type | Description | Example |
 |--------|------|-------------|---------|
 | `search` | string | Search term | `'john doe'` |
-| `search_columns` | array | Columns to search in | `['name', 'email']` |
-| `search_strategy` | string | Search strategy to use | `'fulltext'` |
-| `search_case_sensitive` | bool | Case sensitive search | `false` |
 
 ## 🪝 Hook Configuration
 
@@ -166,12 +205,15 @@ protected const UPDATE_VALIDATION_RULES = [
 | `before_delete` | Before deleting a record | `['id' => $id]` |
 | `after_delete` | After deleting a record | `['id' => $id, 'model' => $model]` |
 
-### Hook Types
+### Hook Methods
 
-| Type | Class | Description | Example |
-|------|-------|-------------|---------|
-| `callable` | `CallableHook` | PHP callable function | `function($data) { return $data; }` |
-| `class` | Custom class | Custom hook class | `class AuditLogHook implements HookInterface` |
+| Method | Description | Example |
+|--------|-------------|---------|
+| `addHook()` | Add a hook for an operation | `$service->addHook('before_create', $hook)` |
+| `executeHooks()` | Execute hooks for an operation | `$service->executeHooks('before_create', $data)` |
+| `getAvailableOperations()` | Get all registered operations | `$service->getAvailableOperations()` |
+| `getHooksForOperation()` | Get hooks for specific operation | `$service->getHooksForOperation('before_create')` |
+| `hasHooks()` | Check if operation has hooks | `$service->hasHooks('before_create')` |
 
 ## 📊 Query Logging Configuration
 
@@ -238,12 +280,10 @@ protected const UPDATE_VALIDATION_RULES = [
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
 | `page` | int | Page number for pagination | `?page=2` |
-| `per_page` | int | Number of records per page | `?per_page=20` |
-| `sort` | string | Column to sort by | `?sort=name` |
-| `order` | string | Sort order (asc/desc) | `?order=desc` |
+| `limit` | int | Number of records per page | `?limit=20` |
+| `sort_by` | string | Column to sort by | `?sort_by=name` |
+| `sort_direction` | string | Sort order (asc/desc) | `?sort_direction=desc` |
 | `search` | string | Search term | `?search=john` |
-| `fields` | string | Comma-separated fields to select | `?fields=id,name,email` |
-| `with` | string | Comma-separated relationships to load | `?with=department,posts` |
 
 ### Filtering Parameters
 
@@ -261,14 +301,11 @@ protected const UPDATE_VALIDATION_RULES = [
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
 | `export` | string | Export format (csv/json) | `?export=csv` |
-| `export_columns` | string | Comma-separated columns to export | `?export=csv&export_columns=name,email` |
 
 ### Search Parameters
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| `search_columns` | string | Comma-separated columns to search | `?search=john&search_columns=name,email` |
-| `search_strategy` | string | Search strategy to use | `?search=john&search_strategy=fulltext` |
 | `search_suggestions` | string | Get search suggestions | `?search_suggestions=john&limit=5` |
 
 ## 🔧 Configuration Examples
@@ -285,8 +322,12 @@ use App\Models\User;
 
 class UserService extends BaseCrudService
 {
+    public function __construct(User $user)
+    {
+        parent::__construct($user);
+    }
+    
     // Core configuration
-    protected $model = User::class;
     
     // Caching configuration
     protected const QUERY_CACHE_ENABLED = true;
@@ -324,21 +365,21 @@ class UserService extends BaseCrudService
     
     // Column configuration
     protected const DIRECT_FILTERABLE_COLUMNS = ['department_id', 'status'];
-    protected const RELATION_FILTERABLE_COLUMNS = ['department.name'];
+    protected const RELATED_FILTERABLE_COLUMNS = ['department_name'];
     
     protected const DIRECT_SORTABLE_COLUMNS = ['name', 'email', 'created_at'];
-    protected const RELATION_SORTABLE_COLUMNS = ['department.name'];
+    protected const RELATED_SORTABLE_COLUMNS = ['department_name'];
     
     protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name', 'email'];
-    protected const RELATION_TEXT_SEARCH_COLUMNS = ['department.name'];
+    protected const RELATED_TEXT_SEARCH_COLUMNS = ['department_name'];
     
     // Search configuration
-    protected const SEARCH_STRATEGY = 'like';
+    protected const ENABLE_FULLTEXT_SEARCH = false;
+    protected const FULLTEXT_SEARCH_COLUMNS = [];
     
     // Pagination configuration
     protected const PAGINATE_PARAM = 'page';
-    protected const LIMIT_PARAM = 'per_page';
-    protected const DEFAULT_PAGE_SIZE = 15;
+    protected const LIMIT_PARAM = 'limit';
 }
 ```
 
