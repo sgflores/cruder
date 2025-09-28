@@ -613,6 +613,133 @@ $hookService->addHook('after_delete', new AuditLogHook());
 
 ---
 
+## 🔧 Overridable Methods
+
+The BaseCrudService provides several protected methods that can be overridden in child classes to customize behavior:
+
+### Data Preparation Methods
+
+#### `prepareCreateData(array $data): array`
+Called before creating a record to modify the data array. The base implementation handles audit trail fields.
+
+```php
+protected function prepareCreateData(array $data): array
+{
+    // Custom logic before creating
+    $data['slug'] = Str::slug($data['name']);
+    $data['hash'] = Hash::make($data['password']);
+    
+    // Call parent to maintain audit trail
+    return parent::prepareCreateData($data);
+}
+```
+
+#### `prepareUpdateData(array $data): array`
+Called before updating a record to modify the data array.
+
+```php
+protected function prepareUpdateData(array $data): array
+{
+    // Custom logic before updating
+    if (isset($data['password'])) {
+        $data['password'] = Hash::make($data['password']);
+    }
+    
+    return parent::prepareUpdateData($data);
+}
+```
+
+#### `prepareDeleteData(Model $model): Model`
+Called before deleting a record to modify the model.
+
+```php
+protected function prepareDeleteData(Model $model): Model
+{
+    // Custom logic before deleting
+    $model->deleted_reason = request('reason', 'No reason provided');
+    
+    return parent::prepareDeleteData($model);
+}
+```
+
+### Query Customization Methods
+
+#### `applyCustomQueryConstraints(Builder $query, array $filters): void`
+Override to add custom query constraints that are applied to all queries. This method is called after all standard filters are applied.
+
+```php
+protected function applyCustomQueryConstraints(Builder $query, array $filters): void
+{
+    // Add global constraints
+    $query->where('status', '!=', 'archived');
+    
+    // Add custom joins
+    $query->leftJoin('user_permissions', 'users.id', '=', 'user_permissions.user_id');
+    
+    // Add role-based filtering
+    if (Auth::user()->role !== 'admin') {
+        $query->where('users.visible', true);
+    }
+}
+```
+
+### Data Transformation Methods
+
+#### `transformResponse($data, array $filters = []): mixed`
+Override to transform the response data before returning it.
+
+```php
+protected function transformResponse($data, array $filters = []): mixed
+{
+    if ($data instanceof Collection) {
+        return $data->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'formatted_date' => $item->created_at->format('Y-m-d'),
+                'custom_field' => $this->calculateCustomField($item)
+            ];
+        });
+    }
+    
+    return $data;
+}
+```
+
+### Cache Management Methods
+
+#### `getCacheTags(): array`
+Override to customize cache tags for better cache invalidation.
+
+```php
+protected function getCacheTags(): array
+{
+    return [
+        'users',
+        'user_' . Auth::id(),
+        'department_' . $this->getCurrentDepartmentId()
+    ];
+}
+```
+
+### Service Configuration Methods
+
+#### `configureServices(): void`
+Override to customize service configurations.
+
+```php
+protected function configureServices(): void
+{
+    parent::configureServices();
+    
+    // Add custom strategies
+    $this->exportService->addStrategy('excel', new ExcelExportStrategy());
+    $this->searchService->addStrategy('elasticsearch', new ElasticsearchStrategy());
+}
+```
+
+---
+
 ## 📚 Related Documentation
 
 - **[README.md](README.md)** - Package overview, installation, and quick start guide

@@ -52,6 +52,244 @@ class ColumnValidationTest extends TestCase
         ]);
     }
 
+    // ========================================================================
+    // --- Advanced Filtering Tests ---
+    // ========================================================================
+
+    public function test_advanced_filter_gte_operator(): void
+    {
+        // Create test data
+        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'id' => ['operator' => 'gte', 'value' => 1]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertGreaterThanOrEqual(1, $result->count());
+    }
+
+    public function test_advanced_filter_gt_operator(): void
+    {
+        $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        $user2 = User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'id' => ['operator' => 'gt', 'value' => $user1->id]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(1, $result);
+        $this->assertEquals($user2->id, $result->first()->id);
+    }
+
+    public function test_advanced_filter_lte_operator(): void
+    {
+        $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        $user2 = User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'id' => ['operator' => 'lte', 'value' => $user1->id]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(1, $result);
+        $this->assertEquals($user1->id, $result->first()->id);
+    }
+
+    public function test_advanced_filter_lt_operator(): void
+    {
+        $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        $user2 = User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'id' => ['operator' => 'lt', 'value' => $user2->id]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(1, $result);
+        $this->assertEquals($user1->id, $result->first()->id);
+    }
+
+    public function test_advanced_filter_like_operator(): void
+    {
+        User::factory()->create(['name' => 'John Doe', 'department_id' => $this->department->id]);
+        User::factory()->create(['name' => 'Jane Smith', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'name' => ['operator' => 'like', 'value' => '%John%']
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(1, $result);
+        $this->assertEquals('John Doe', $result->first()->name);
+    }
+
+    public function test_advanced_filter_not_like_operator(): void
+    {
+        User::factory()->create(['name' => 'John Doe', 'department_id' => $this->department->id]);
+        User::factory()->create(['name' => 'Jane Smith', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'name' => ['operator' => 'not_like', 'value' => '%John%']
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(1, $result);
+        $this->assertEquals('Jane Smith', $result->first()->name);
+    }
+
+    public function test_advanced_filter_in_operator(): void
+    {
+        $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        $user2 = User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        $user3 = User::factory()->create(['name' => 'User 3', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'id' => ['operator' => 'in', 'value' => [$user1->id, $user2->id]]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(2, $result);
+        $this->assertTrue($result->contains('id', $user1->id));
+        $this->assertTrue($result->contains('id', $user2->id));
+        $this->assertFalse($result->contains('id', $user3->id));
+    }
+
+    public function test_advanced_filter_not_in_operator(): void
+    {
+        $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        $user2 = User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        $user3 = User::factory()->create(['name' => 'User 3', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'id' => ['operator' => 'not_in', 'value' => [$user1->id, $user2->id]]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(1, $result);
+        $this->assertEquals($user3->id, $result->first()->id);
+    }
+
+    public function test_advanced_filter_between_operator(): void
+    {
+        $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        $user2 = User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        $user3 = User::factory()->create(['name' => 'User 3', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'id' => ['operator' => 'between', 'value' => [$user1->id, $user2->id]]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(2, $result);
+        $this->assertTrue($result->contains('id', $user1->id));
+        $this->assertTrue($result->contains('id', $user2->id));
+        $this->assertFalse($result->contains('id', $user3->id));
+    }
+
+    public function test_advanced_filter_not_between_operator(): void
+    {
+        $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        $user2 = User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        $user3 = User::factory()->create(['name' => 'User 3', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'id' => ['operator' => 'not_between', 'value' => [$user1->id, $user2->id]]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(1, $result);
+        $this->assertEquals($user3->id, $result->first()->id);
+    }
+
+    public function test_advanced_filter_is_null_operator(): void
+    {
+        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'deleted_at' => ['operator' => 'is_null', 'value' => null]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertGreaterThanOrEqual(2, $result->count());
+    }
+
+    public function test_advanced_filter_is_not_null_operator(): void
+    {
+        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'created_at' => ['operator' => 'is_not_null', 'value' => null]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertGreaterThanOrEqual(2, $result->count());
+    }
+
+    public function test_advanced_filter_ignores_non_array_values(): void
+    {
+        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'name' => 'User 1', // This should be ignored by advanced filters
+            'id' => ['operator' => 'gte', 'value' => 1]
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertGreaterThanOrEqual(1, $result->count());
+    }
+
+    public function test_advanced_filter_ignores_missing_operator(): void
+    {
+        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'name' => ['value' => 'User 1'] // Missing operator, should be ignored
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertGreaterThanOrEqual(1, $result->count());
+    }
+
+    public function test_advanced_filter_ignores_reserved_parameters(): void
+    {
+        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
+        
+        $result = $this->userService->findAll([
+            'paginate' => ['operator' => 'gte', 'value' => 1], // Reserved parameter
+            'search' => ['operator' => 'like', 'value' => '%User%'], // Reserved parameter
+            'sort_by' => ['operator' => 'eq', 'value' => 'name'], // Reserved parameter
+            'id' => ['operator' => 'gte', 'value' => 1] // Valid filter
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertGreaterThanOrEqual(1, $result->count());
+    }
+
+    public function test_advanced_filter_throws_exception_for_invalid_column(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Advanced filter column 'invalid_column' is not declared in filterable columns");
+        
+        $this->userService->findAll([
+            'invalid_column' => ['operator' => 'gte', 'value' => 100]
+        ]);
+    }
+
+    public function test_advanced_filter_throws_exception_for_related_column_not_in_filterable(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Advanced filter column 'department_name' is not declared in filterable columns");
+        
+        $this->userService->findAll([
+            'department_name' => ['operator' => 'like', 'value' => '%Engineering%']
+        ]);
+    }
+
     public function test_throws_exception_when_no_searchable_columns_declared(): void
     {
         // Create a service with no searchable columns

@@ -2,26 +2,27 @@
 
 namespace SgFlores\Cruder;
 
+use InvalidArgumentException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Validation\ValidationException;
-use SgFlores\Cruder\Services\SearchService;
-use SgFlores\Cruder\Services\ExportService;
+use Illuminate\Support\Facades\Validator;
 use SgFlores\Cruder\Services\HookService;
 use SgFlores\Cruder\Services\QueryLogger;
-use SgFlores\Cruder\Strategies\Search\FullTextSearchStrategy;
-use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
-use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
-use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
+use SgFlores\Cruder\Services\ExportService;
+use SgFlores\Cruder\Services\SearchService;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Validation\ValidationException;
 use SgFlores\Cruder\Strategies\Hooks\CallableHook;
+use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
+use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
+use SgFlores\Cruder\Strategies\Search\FullTextSearchStrategy;
 
 /**
  * Base CRUD Service with SOLID principles implementation.
@@ -474,9 +475,9 @@ abstract class BaseCrudService
             $cacheKey = $this->buildCacheKey($filters, 'all');
             $result = Cache::remember($cacheKey, static::CACHE_LIFETIME_SECONDS, fn() => $query->get());
         } else {
-        if (isset($filters[static::PAGINATE_PARAM])) {
+            if (isset($filters[static::PAGINATE_PARAM]) && !is_array($filters[static::PAGINATE_PARAM])) {
                 $result = $query->paginate($filters[static::PAGINATE_PARAM]);
-            } elseif (isset($filters[static::LIMIT_PARAM])) {
+            } elseif (isset($filters[static::LIMIT_PARAM]) && !is_array($filters[static::LIMIT_PARAM])) {
                 $result = $query->limit($filters[static::LIMIT_PARAM])->get();
             } else {
                 $result = $query->get();
@@ -881,7 +882,7 @@ abstract class BaseCrudService
         $this->applyFieldSelection($query, $filters);
 
         // 3. Apply text search if search term provided
-        if (!empty($searchTerm)) {
+        if (!empty($searchTerm) && is_string($searchTerm)) {
             $this->applyTextSearch($query, $searchTerm);
         }
 
@@ -905,7 +906,7 @@ abstract class BaseCrudService
      * @param Builder $queryBuilder The Eloquent query builder instance
      * @param string $searchTerm The search term to look for
      * @return void
-     * @throws \InvalidArgumentException If no searchable columns are declared
+     * @throws InvalidArgumentException If no searchable columns are declared
      */
     protected function applyTextSearch(Builder $queryBuilder, string $searchTerm): void
     {
@@ -916,7 +917,7 @@ abstract class BaseCrudService
         );
         
         if (empty($searchableColumns)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "No searchable columns are declared. " .
                 "Please define DIRECT_TEXT_SEARCH_COLUMNS or RELATED_TEXT_SEARCH_COLUMNS to enable text search."
             );
@@ -962,7 +963,7 @@ abstract class BaseCrudService
      * @param Builder $queryBuilder The Eloquent query builder instance
      * @param array $queryOptions The filter criteria to apply
      * @return void
-     * @throws \InvalidArgumentException If an invalid column is used for filtering
+     * @throws InvalidArgumentException If an invalid column is used for filtering
      */
     protected function applyColumnFilters(Builder $queryBuilder, array $queryOptions): void
     {
@@ -978,9 +979,14 @@ abstract class BaseCrudService
                 continue;
             }
 
+            // Skip advanced filter arrays (they will be processed by applyAdvancedFilters)
+            if (is_array($filterValue) && isset($filterValue['operator'])) {
+                continue;
+            }
+
             // Validate column is in allowed filterable columns (security check)
             if (!in_array($columnName, $allowedColumns)) {
-                throw new \InvalidArgumentException(
+                throw new InvalidArgumentException(
                     "Filtered column '{$columnName}' is not declared in filterable columns. " .
                     "Allowed columns: " . implode(', ', $allowedColumns)
                 );
@@ -1013,12 +1019,16 @@ abstract class BaseCrudService
      * @param Builder $queryBuilder The Eloquent query builder instance
      * @param array $queryOptions Array containing sortBy and sortDirection parameters
      * @return void
-     * @throws \InvalidArgumentException If an invalid column is used for sorting
+     * @throws InvalidArgumentException If an invalid column is used for sorting
      */
     protected function applySorting(Builder $queryBuilder, array $queryOptions): void
     {
-        $sortColumn = strtolower($queryOptions[static::SORT_BY_PARAM] ?? static::DEFAULT_SORT_COLUMN);
-        $sortDirection = strtolower($queryOptions[static::SORT_DIRECTION_PARAM] ?? static::DEFAULT_SORT_DIRECTION);
+        $sortColumn = $queryOptions[static::SORT_BY_PARAM] ?? static::DEFAULT_SORT_COLUMN;
+        $sortDirection = $queryOptions[static::SORT_DIRECTION_PARAM] ?? static::DEFAULT_SORT_DIRECTION;
+
+        if (is_array($sortColumn) || is_array($sortDirection)) {
+            return;
+        }
 
         // Get all allowed sortable columns
         $allowedColumns = array_merge(
@@ -1028,7 +1038,7 @@ abstract class BaseCrudService
 
         // Validate sort column is in allowed sortable columns
         if (!in_array($sortColumn, $allowedColumns)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "Sort column '{$sortColumn}' is not declared in sortable columns. " .
                 "Allowed columns: " . implode(', ', $allowedColumns)
             );
@@ -1180,7 +1190,7 @@ abstract class BaseCrudService
      * @param Builder $queryBuilder The Eloquent query builder instance
      * @param array $queryOptions The filter criteria to apply
      * @return void
-     * @throws \InvalidArgumentException If an invalid column is used for advanced filtering
+     * @throws InvalidArgumentException If an invalid column is used for advanced filtering
      */
     protected function applyAdvancedFilters(Builder $queryBuilder, array $queryOptions): void
     {
@@ -1209,9 +1219,8 @@ abstract class BaseCrudService
             
             // Validate column is in allowed filterable columns
             if (!in_array($columnName, $allowedColumns)) {
-                throw new \InvalidArgumentException(
-                    "Advanced filter column '{$columnName}' is not declared in filterable columns. " .
-                    "Allowed columns: " . implode(', ', $allowedColumns)
+                throw new InvalidArgumentException(
+                    "Advanced filter column '{$columnName}' is not declared in filterable columns"
                 );
             }
             
@@ -1255,10 +1264,14 @@ abstract class BaseCrudService
                 $queryBuilder->where($columnName, 'NOT LIKE', $value);
                 break;
             case 'in':
-                $queryBuilder->whereIn($columnName, (array) $value);
+                if (is_array($value)) {
+                    $queryBuilder->whereIn($columnName, $value);
+                }
                 break;
             case 'not_in':
-                $queryBuilder->whereNotIn($columnName, (array) $value);
+                if (is_array($value)) {
+                    $queryBuilder->whereNotIn($columnName, $value);
+                }
                 break;
             case 'between':
                 if (is_array($value) && count($value) === 2) {
@@ -1511,7 +1524,7 @@ abstract class BaseCrudService
      * @param array $columns Columns to export
      * @param array $options Additional export options
      * @return string Exported data
-     * @throws \InvalidArgumentException If the format is not supported
+     * @throws InvalidArgumentException If the format is not supported
      */
     public function export(string $format, array $filters = [], array $columns = [], array $options = []): string
     {
