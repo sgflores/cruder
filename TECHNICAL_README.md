@@ -70,7 +70,7 @@ class BaseCrudService
 {
     // Core CRUD operations
     public function findAll(array $filters = []): Collection|LengthAwarePaginator
-    public function find(int $id): ?Model
+    public function findById(int $id): ?Model
     public function create(array $data): Model
     public function update(int $id, array $data): Model
     public function delete(int $id): bool
@@ -81,7 +81,7 @@ class BaseCrudService
     public function bulkDelete(array $filters): int
     
     // Advanced features
-    public function export(string $format, array $filters = []): string
+    public function export(string $format, array $filters = [], array $columns = [], array $options = []): string
     public function getSearchSuggestions(string $term, int $limit = 10): Collection
 }
 ```
@@ -142,6 +142,83 @@ protected function validateColumn(string $column, string $operation): void
 }
 ```
 
+#### 4. Advanced Filtering System
+
+The filtering system supports both direct column filtering and related model filtering:
+
+**Direct Column Filtering:**
+```php
+// Filters columns directly on the main model
+protected const DIRECT_FILTERABLE_COLUMNS = [
+    'status', 'department_id', 'role', 'created_at'
+];
+
+// Usage: GET /users?status=active&department_id=1
+```
+
+**Related Column Filtering:**
+```php
+// Filters columns on related models using underscore notation
+protected const RELATED_FILTERABLE_COLUMNS = [
+    'department_name', 'profile_age', 'company_location'
+];
+
+// Usage: GET /users?filters[department_name]=Engineering
+```
+
+**Filtering Implementation:**
+```php
+protected function applyColumnFilters(Builder $queryBuilder, array $queryOptions): void
+{
+    $allowedColumns = array_merge(
+        static::DIRECT_FILTERABLE_COLUMNS,
+        static::RELATED_FILTERABLE_COLUMNS
+    );
+    
+    foreach ($queryOptions as $column => $value) {
+        if ($this->isReservedParameterKey($column)) {
+            continue;
+        }
+        
+        // Validate column is allowed
+        if (!in_array($column, $allowedColumns)) {
+            throw new InvalidArgumentException(
+                "Filtered column '{$column}' is not declared. Allowed columns: " . implode(', ', $allowedColumns)
+            );
+        }
+        
+        // Apply filter based on column type
+        if (in_array($column, static::DIRECT_FILTERABLE_COLUMNS)) {
+            $queryBuilder->where($column, $value);
+        } else {
+            // Handle related column filtering
+            $this->applyRelatedColumnFilter($queryBuilder, $column, $value);
+        }
+    }
+}
+```
+
+**Advanced Filtering with Range Operations:**
+```php
+protected function applyAdvancedFilters(Builder $queryBuilder, array $queryOptions): void
+{
+    $advancedFilters = [
+        'gte' => '>=', 'gt' => '>', 'lte' => '<=', 'lt' => '<',
+        'from' => '>=', 'to' => '<=', 'min' => '>=', 'max' => '<='
+    ];
+    
+    foreach ($queryOptions as $column => $filters) {
+        if (!is_array($filters)) continue;
+        
+        foreach ($filters as $operator => $value) {
+            if (isset($advancedFilters[$operator])) {
+                $queryBuilder->where($column, $advancedFilters[$operator], $value);
+            }
+        }
+    }
+}
+```
+
 #### 4. Caching System
 ```php
 protected function buildCacheKey(array $filters, string $operation = 'all'): string
@@ -181,12 +258,10 @@ class ExportService
 **Real-world Example:**
 ```php
 // Export user data to CSV
-$users = $userService->findAll(['department_id' => 1]);
-$csv = $exportService->export('csv', $users, ['columns' => ['name', 'email']]);
+$csv = $userService->export('csv', ['department_id' => 1], ['name', 'email']);
 
 // Export product catalog to JSON
-$products = $productService->findAll(['category_id' => 2]);
-$json = $exportService->export('json', $products, ['pretty' => true]);
+$json = $productService->export('json', ['category_id' => 2], [], ['pretty' => true]);
 ```
 
 ### SearchService
@@ -212,10 +287,10 @@ class SearchService
 **Real-world Example:**
 ```php
 // Search users by name or email
-$users = $userService->findAll(['search' => 'john', 'search_columns' => ['name', 'email']]);
+$users = $userService->findAll(['search' => 'john']);
 
-// Full-text search in product descriptions
-$products = $productService->findAll(['search' => 'laptop gaming', 'search_strategy' => 'fulltext']);
+// Search suggestions
+$suggestions = $userService->getSearchSuggestions('john', 5);
 ```
 
 ### HookService
@@ -227,25 +302,28 @@ class HookService
 {
     protected array $hooks = [];
     
-    public function registerHook(string $event, HookInterface $hook): void
-    public function executeHooks(string $event, array $data, array $context = []): array
+    public function addHook(string $operation, HookInterface $hook): void
+    public function executeHooks(string $operation, $data): mixed
+    public function getAvailableOperations(): array
+    public function getHooksForOperation(string $operation): array
+    public function hasHooks(string $operation): bool
 }
 ```
 
 **Real-world Example:**
 ```php
 // Register a hook for user creation
-$hookService->registerHook('before_create', new CallableHook(function($data) {
+$userService->addHook('before_create', function($data) {
     $data['created_by'] = Auth::id();
     return $data;
-}));
+});
 
 // Register a hook for data validation
-$hookService->registerHook('after_update', new CallableHook(function($data) {
+$userService->addHook('after_update', function($data) {
     // Send notification email
     Mail::to($data['email'])->send(new UserUpdatedNotification($data));
     return $data;
-}));
+});
 ```
 
 ### QueryLogger
@@ -345,7 +423,10 @@ Return Data
 ```php
 class ProductService extends BaseCrudService
 {
-    protected $model = Product::class;
+    public function __construct(Product $product)
+    {
+        parent::__construct($product);
+    }
     
     protected const DIRECT_FILTERABLE_COLUMNS = [
         'category_id', 'brand_id', 'price', 'in_stock', 'status'
@@ -366,11 +447,11 @@ $products = $productService->findAll([
     'price_min' => 100,
     'price_max' => 500,
     'in_stock' => true,
-    'sort' => 'price',
-    'order' => 'asc',
+    'sort_by' => 'price',
+    'sort_direction' => 'asc',
     'search' => 'laptop',
     'page' => 1,
-    'per_page' => 20
+    'limit' => 20
 ]);
 ```
 
@@ -379,7 +460,10 @@ $products = $productService->findAll([
 ```php
 class UserService extends BaseCrudService
 {
-    protected $model = User::class;
+    public function __construct(User $user)
+    {
+        parent::__construct($user);
+    }
     
     protected const CREATE_VALIDATION_RULES = [
         'name' => 'required|string|max:255',
@@ -399,8 +483,8 @@ $users = $userService->findAll([
     'department_id' => 2,
     'status' => 'active',
     'search' => 'john',
-    'sort' => 'created_at',
-    'order' => 'desc'
+    'sort_by' => 'created_at',
+    'sort_direction' => 'desc'
 ]);
 ```
 
@@ -409,7 +493,10 @@ $users = $userService->findAll([
 ```php
 class ArticleService extends BaseCrudService
 {
-    protected $model = Article::class;
+    public function __construct(Article $article)
+    {
+        parent::__construct($article);
+    }
     
     protected const DIRECT_TEXT_SEARCH_COLUMNS = [
         'title', 'content', 'excerpt'
@@ -425,10 +512,9 @@ $articles = $articleService->findAll([
     'status' => 'published',
     'category_id' => 3,
     'search' => 'laravel tutorial',
-    'sort' => 'published_at',
-    'order' => 'desc',
-    'with' => ['author', 'category']
-]);
+    'sort_by' => 'published_at',
+    'sort_direction' => 'desc'
+], ['author', 'category']);
 ```
 
 ## 🔧 Extension Points
@@ -446,7 +532,7 @@ class ExcelExportStrategy implements ExportStrategyInterface
 }
 
 // Register in ExportService
-$exportService->registerStrategy('excel', ExcelExportStrategy::class);
+$exportService->addStrategy('excel', new ExcelExportStrategy());
 ```
 
 ### 2. Custom Search Strategies
@@ -462,7 +548,7 @@ class ElasticsearchStrategy implements SearchStrategyInterface
 }
 
 // Register in SearchService
-$searchService->registerStrategy('elasticsearch', ElasticsearchStrategy::class);
+$searchService->addStrategy('elasticsearch', new ElasticsearchStrategy());
 ```
 
 ### 3. Custom Hooks
@@ -485,9 +571,9 @@ class AuditLogHook implements HookInterface
 }
 
 // Register hook
-$hookService->registerHook('after_create', new AuditLogHook());
-$hookService->registerHook('after_update', new AuditLogHook());
-$hookService->registerHook('after_delete', new AuditLogHook());
+$hookService->addHook('after_create', new AuditLogHook());
+$hookService->addHook('after_update', new AuditLogHook());
+$hookService->addHook('after_delete', new AuditLogHook());
 ```
 
 ## 🚀 Performance Considerations

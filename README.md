@@ -91,7 +91,10 @@ use App\Models\User;
 
 class UserService extends BaseCrudService
 {
-    protected $model = User::class;
+    public function __construct(User $user)
+    {
+        parent::__construct($user);
+    }
     
     // Define your configuration
     protected const QUERY_CACHE_ENABLED = true;
@@ -157,7 +160,7 @@ class UserController extends Controller
     
     public function show($id)
     {
-        $user = $this->userService->find($id);
+        $user = $this->userService->findById($id);
         
         return response()->json($user);
     }
@@ -179,6 +182,216 @@ class UserController extends Controller
 ```
 
 ## 🔧 URL Parameters & Examples
+
+### Supported URL Parameters
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `page` | int | Page number for pagination | `?page=2` |
+| `limit` | int | Number of records per page | `?limit=20` |
+| `search` | string | Text search term | `?search=john` |
+| `sort_by` | string | Column to sort by | `?sort_by=name` |
+| `sort_direction` | string | Sort direction (asc/desc) | `?sort_direction=desc` |
+| `{column}` | mixed | Direct column filter | `?status=active` |
+| `filters[{column}]` | mixed | Advanced column filter | `?filters[status]=active` |
+| `filters[{column}][from]` | date | Date range from | `?filters[created_at][from]=2024-01-01` |
+| `filters[{column}][to]` | date | Date range to | `?filters[created_at][to]=2024-12-31` |
+| `export` | string | Export format (csv/json) | `?export=csv` |
+| `search_suggestions` | string | Get search suggestions | `?search_suggestions=john&limit=5` |
+
+**Note:** Relationships are loaded via the `$withRelations` parameter in code, not URL parameters:
+```php
+// Load relationships in code
+$users = $userService->findAll($filters, ['department', 'profile']);
+$user = $userService->findById($id, ['department', 'posts']);
+```
+
+## 🔍 Advanced Filtering System
+
+Cruder provides a powerful and secure filtering system that supports both direct column filtering and related model filtering.
+
+### Direct Column Filtering
+
+Direct column filtering allows you to filter by columns directly on the main model:
+
+```php
+// In your service class
+protected const DIRECT_FILTERABLE_COLUMNS = [
+    'status', 'department_id', 'role', 'created_at'
+];
+
+// Usage via URL parameters
+GET /users?status=active&department_id=1&role=admin
+```
+
+### Related Column Filtering
+
+Related column filtering allows you to filter by columns on related models:
+
+```php
+// In your service class
+protected const RELATED_FILTERABLE_COLUMNS = [
+    'department_name', 'profile_age', 'company_location'
+];
+
+// Usage via URL parameters
+GET /users?filters[department_name]=Engineering&filters[profile_age][min]=25
+```
+
+### Advanced Filtering Examples
+
+#### 1. Basic Direct Filtering
+```php
+// Service configuration
+protected const DIRECT_FILTERABLE_COLUMNS = [
+    'status', 'department_id', 'role', 'is_active'
+];
+
+// URL examples
+GET /users?status=active
+GET /users?department_id=1&role=admin
+GET /users?is_active=true&status=active
+```
+
+#### 2. Related Model Filtering
+```php
+// Service configuration
+protected const RELATED_FILTERABLE_COLUMNS = [
+    'department_name', 'department_location', 'profile_age', 'company_size'
+];
+
+// URL examples
+GET /users?filters[department_name]=Engineering
+GET /users?filters[department_location]=New York
+GET /users?filters[profile_age][min]=25&filters[profile_age][max]=65
+GET /users?filters[company_size]=large
+```
+
+#### 3. Date Range Filtering
+```php
+// Service configuration
+protected const DIRECT_FILTERABLE_COLUMNS = [
+    'created_at', 'updated_at', 'last_login_at'
+];
+
+// URL examples
+GET /users?filters[created_at][from]=2024-01-01
+GET /users?filters[created_at][to]=2024-12-31
+GET /users?filters[last_login_at][from]=2024-01-01&filters[last_login_at][to]=2024-01-31
+```
+
+#### 4. Numeric Range Filtering
+```php
+// Service configuration
+protected const DIRECT_FILTERABLE_COLUMNS = [
+    'age', 'salary', 'experience_years'
+];
+
+// URL examples
+GET /users?filters[age][min]=25&filters[age][max]=65
+GET /users?filters[salary][gte]=50000&filters[salary][lte]=100000
+GET /users?filters[experience_years][gt]=5
+```
+
+### Complete Filtering Example
+
+```php
+<?php
+
+namespace App\Services;
+
+use SgFlores\Cruder\BaseCrudService;
+use App\Models\User;
+
+class UserService extends BaseCrudService
+{
+    public function __construct(User $user)
+    {
+        parent::__construct($user);
+    }
+    
+    // Direct column filtering (columns on users table)
+    protected const DIRECT_FILTERABLE_COLUMNS = [
+        'status', 'role', 'is_active', 'created_at', 'age', 'salary'
+    ];
+    
+    // Related column filtering (columns on related models)
+    protected const RELATED_FILTERABLE_COLUMNS = [
+        'department_name', 'department_location', 'profile_bio', 'company_size'
+    ];
+    
+    // Searchable columns
+    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
+        'name', 'email', 'phone'
+    ];
+    
+    protected const RELATED_TEXT_SEARCH_COLUMNS = [
+        'department_name', 'profile_bio'
+    ];
+    
+    // Sortable columns
+    protected const DIRECT_SORTABLE_COLUMNS = [
+        'name', 'email', 'created_at', 'age', 'salary'
+    ];
+    
+    protected const RELATED_SORTABLE_COLUMNS = [
+        'department_name', 'company_size'
+    ];
+}
+```
+
+### Real-World Filtering Use Cases
+
+#### E-commerce Product Filtering
+```php
+// ProductService configuration
+protected const DIRECT_FILTERABLE_COLUMNS = [
+    'category_id', 'brand_id', 'price', 'in_stock', 'status', 'created_at'
+];
+
+protected const RELATED_FILTERABLE_COLUMNS = [
+    'category_name', 'brand_name', 'reviews_rating'
+];
+
+// URL examples
+GET /products?category_id=1&in_stock=true&status=active
+GET /products?filters[price][min]=100&filters[price][max]=500
+GET /products?filters[category_name]=Electronics&filters[brand_name]=Apple
+GET /products?filters[reviews_rating][gte]=4.0
+```
+
+#### User Management Filtering
+```php
+// UserService configuration
+protected const DIRECT_FILTERABLE_COLUMNS = [
+    'role', 'status', 'department_id', 'created_at', 'last_login_at'
+];
+
+protected const RELATED_FILTERABLE_COLUMNS = [
+    'department_name', 'profile_age', 'company_location'
+];
+
+// URL examples
+GET /users?role=admin&status=active
+GET /users?filters[department_name]=Engineering&filters[profile_age][min]=25
+GET /users?filters[last_login_at][from]=2024-01-01&filters[company_location]=New York
+```
+
+### Security Features
+
+The filtering system includes built-in security:
+
+1. **Column Validation**: Only columns declared in `DIRECT_FILTERABLE_COLUMNS` and `RELATED_FILTERABLE_COLUMNS` can be used for filtering
+2. **SQL Injection Prevention**: Column names are validated before being used in queries
+3. **Error Messages**: Clear error messages when invalid columns are used
+
+```php
+// This will throw an InvalidArgumentException
+GET /users?invalid_column=value
+
+// Error: "Filtered column 'invalid_column' is not declared. 
+// Allowed columns: status, department_id, role, created_at"
+```
 
 ### Basic CRUD Operations
 
@@ -207,52 +420,19 @@ PUT /users/1
 DELETE /users/1
 ```
 
-### Advanced Query Parameters
-
-```php
-// Filtering
-GET /users?department_id=1&status=active
-
-// Sorting
-GET /users?sort=name&order=asc
-GET /users?sort=created_at&order=desc
-
-// Text Search
-GET /users?search=john
-
-// Pagination
-GET /users?page=2&per_page=10
-
-// Field Selection
-GET /users?fields=id,name,email
-
-// Include Relations
-GET /users?with=department,posts
-
-// Advanced Filtering
-GET /users?filters[department_id]=1&filters[status]=active&filters[created_at][from]=2024-01-01
-
-// Export
-GET /users?export=csv
-GET /users?export=json
-
-// Search Suggestions
-GET /users?search_suggestions=john&limit=5
-```
-
 ### Real-World Examples
 
 #### 🛒 E-commerce Product Management
 
 ```php
 // Get products with advanced filters
-GET /products?category_id=1&price_min=100&price_max=500&in_stock=true&sort=price&order=asc
+GET /products?category_id=1&price_min=100&price_max=500&in_stock=true&sort_by=price&sort_direction=asc
 
 // Search products with multiple criteria
 GET /products?search=laptop&category_id=electronics&brand_id=2&status=active
 
-// Export product catalog with specific columns
-GET /products?export=csv&filters[category_id]=1&export_columns=name,price,stock
+// Export product catalog
+GET /products?export=csv&filters[category_id]=1
 
 // Get product suggestions
 GET /products?search_suggestions=laptop&limit=10
@@ -262,45 +442,16 @@ GET /products?search_suggestions=laptop&limit=10
 
 ```php
 // Get users with pagination and sorting
-GET /users?page=1&per_page=20&sort=created_at&order=desc
+GET /users?page=1&limit=20&sort_by=created_at&sort_direction=desc
 
 // Filter active users by department
 GET /users?filters[status]=active&filters[department_id]=2
 
 // Search users by name or email
-GET /users?search=john&fields=id,name,email,department
+GET /users?search=john
 
-// Get users with relationships
-GET /users?with=department,profile&filters[role]=admin
-```
-
-#### 📰 Content Management System
-
-```php
-// Get published articles with pagination
-GET /articles?status=published&page=1&per_page=15&sort=published_at&order=desc
-
-// Search articles by title or content
-GET /articles?search=laravel tutorial&search_columns=title,content
-
-// Filter articles by date range
-GET /articles?filters[published_at][from]=2024-01-01&filters[published_at][to]=2024-12-31
-
-// Export article data
-GET /articles?export=json&filters[category_id]=1&export_columns=title,author,published_at
-```
-
-#### 📊 Analytics Dashboard
-
-```php
-// Get sales data with complex filters
-GET /sales?filters[date][from]=2024-01-01&filters[date][to]=2024-12-31&filters[status]=completed
-
-// Get top performing products
-GET /products?sort=sales_count&order=desc&per_page=10&filters[status]=active
-
-// Export analytics data
-GET /analytics?export=csv&filters[period]=monthly&export_columns=date,revenue,orders
+// Get users with relationships (via withRelations parameter in code)
+$users = $userService->findAll($filters, ['department', 'profile']);
 ```
 
 ## 🔍 Feature Deep Dive
@@ -331,17 +482,17 @@ Cruder includes comprehensive query logging with performance monitoring:
 Extensible hook system for custom business logic:
 
 ```php
-// Register hooks
-$hookService->registerHook('before_create', new CallableHook(function($data) {
+// Register hooks using the service method
+$userService->addHook('before_create', function($data) {
     $data['created_by'] = Auth::id();
     return $data;
-}));
+});
 
-$hookService->registerHook('after_update', new CallableHook(function($data) {
+$userService->addHook('after_update', function($data) {
     // Send notification
     Mail::to($data['email'])->send(new UserUpdatedNotification($data));
     return $data;
-}));
+});
 ```
 
 **Available Hooks:**
@@ -355,13 +506,10 @@ Flexible export functionality with strategy pattern:
 
 ```php
 // Export to CSV
-$csv = $userService->export('csv', $users, [
-    'columns' => ['name', 'email', 'created_at'],
-    'headers' => ['name' => 'Full Name', 'email' => 'Email']
-]);
+$csv = $userService->export('csv', [], ['name', 'email', 'created_at']);
 
 // Export to JSON
-$json = $userService->export('json', $users, ['pretty' => true]);
+$json = $userService->export('json', [], [], ['pretty' => true]);
 ```
 
 **Supported Formats:**
@@ -377,21 +525,14 @@ Intelligent search with multiple strategies:
 // Like search (default)
 $users = $userService->findAll(['search' => 'john']);
 
-// Full-text search
-$users = $userService->findAll([
-    'search' => 'john doe',
-    'search_strategy' => 'fulltext'
-]);
-
 // Search suggestions
 $suggestions = $userService->getSearchSuggestions('john', 5);
 ```
 
 **Search Features:**
-- Multiple search strategies
-- Column-specific search
+- Text search across declared searchable columns
 - Search suggestions
-- Case-insensitive search
+- Configurable search strategies
 
 ### ⚡ Performance Features
 
@@ -407,7 +548,7 @@ protected const ENABLE_CHUNKED_PROCESSING = true;
 protected const CHUNK_SIZE = 1000;
 
 // Pagination
-GET /users?page=1&per_page=20
+GET /users?page=1&limit=20
 ```
 
 **Performance Benefits:**
@@ -428,7 +569,6 @@ GET /users?page=1&per_page=20
 - [Installation Guide](#-installation)
 - [Quick Start](#-quick-start)
 - [URL Parameters & Examples](#-url-parameters--examples)
-- [Real-World Examples](#-real-world-examples)
 - [Configuration Reference](OPTIONS_README.md)
 - [Architecture Overview](TECHNICAL_README.md)
 - [Query Logging Setup](QUERY_LOGGING.md)

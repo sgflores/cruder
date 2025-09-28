@@ -20,7 +20,7 @@ php artisan vendor:publish --tag=cruder-config
     'enabled' => env('CRUDER_QUERY_LOGGING_ENABLED', false),
     'log_all_operations' => env('CRUDER_LOG_ALL_OPERATIONS', true),
     'log_level' => env('CRUDER_QUERY_LOG_LEVEL', 'debug'),
-    'include_bindings' => env('CRUDER_INCLUDE_QUERY_BINDINGS', true),
+    'include_bindings' => env('CRUDER_INCLUDE_BINDINGS', true),
     'include_execution_time' => env('CRUDER_INCLUDE_EXECUTION_TIME', true),
 ],
 ```
@@ -36,9 +36,11 @@ You can control which operations are logged:
     'update' => env('CRUDER_LOG_UPDATE_OPERATIONS', true),
     'delete' => env('CRUDER_LOG_DELETE_OPERATIONS', true),
     'count' => env('CRUDER_LOG_COUNT_OPERATIONS', true),
-    'bulk_create' => env('CRUDER_LOG_BULK_CREATE_OPERATIONS', true),
-    'bulk_update' => env('CRUDER_LOG_BULK_UPDATE_OPERATIONS', true),
-    'bulk_delete' => env('CRUDER_LOG_BULK_DELETE_OPERATIONS', true),
+    'bulkCreate' => env('CRUDER_LOG_BULK_CREATE_OPERATIONS', true),
+    'bulkUpdate' => env('CRUDER_LOG_BULK_UPDATE_OPERATIONS', true),
+    'bulkDelete' => env('CRUDER_LOG_BULK_DELETE_OPERATIONS', true),
+    'export' => env('CRUDER_LOG_EXPORT_OPERATIONS', true),
+    'searchSuggestions' => env('CRUDER_LOG_SEARCH_SUGGESTIONS_OPERATIONS', true),
 ],
 ```
 
@@ -75,7 +77,7 @@ CRUDER_LOG_DELETE_OPERATIONS=true
 
 # Log level and details
 CRUDER_QUERY_LOG_LEVEL=debug
-CRUDER_INCLUDE_QUERY_BINDINGS=true
+CRUDER_INCLUDE_BINDINGS=true
 CRUDER_INCLUDE_EXECUTION_TIME=true
 
 # Slow query detection
