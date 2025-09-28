@@ -1,0 +1,215 @@
+<?php
+
+namespace SgFlores\Cruder\Services;
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Builder;
+use SgFlores\Cruder\Traits\CruderTrait;
+
+class QueryLogger
+{
+    use CruderTrait;
+    
+    /**
+     * Log a query for a specific operation.
+     * 
+     * @param string $operation The operation type (find, create, update, delete, etc.)
+     * @param Builder $query The query builder instance
+     * @param float $executionTime The execution time in milliseconds
+     * @param array $context Additional context data
+     * @return void
+     */
+    public function logQuery(string $operation, Builder $query, float $executionTime = 0, array $context = []): void
+    {
+        // Check if query logging is enabled
+        if (!$this->isQueryLoggingEnabled()) {
+            return;
+        }
+
+        // Check if this operation should be logged
+        if (!$this->shouldLogOperation($operation)) {
+            return;
+        }
+
+        // Check if we should only log slow queries
+        if ($this->shouldOnlyLogSlowQueries() && !$this->isSlowQuery($executionTime)) {
+            return;
+        }
+
+        // Prepare log data
+        $logData = $this->prepareLogData($operation, $query, $executionTime, $context);
+
+        // Determine log level
+        $logLevel = $this->getLogLevel($executionTime);
+
+        // Log the query
+        $this->writeLog($logLevel, $logData);
+    }
+
+    /**
+     * Log all queries from the query log.
+     * 
+     * @param string $operation The operation type
+     * @param array $context Additional context data
+     * @return void
+     */
+    public function logAllQueries(string $operation, array $context = []): void
+    {
+        if (!$this->isQueryLoggingEnabled() || !$this->shouldLogOperation($operation)) {
+            return;
+        }
+
+        $queries = DB::getQueryLog();
+        
+        foreach ($queries as $queryData) {
+            $this->logQueryData($operation, $queryData, $context);
+        }
+    }
+
+    /**
+     * Check if query logging is enabled.
+     * 
+     * @return bool
+     */
+    protected function isQueryLoggingEnabled(): bool
+    {
+        return config('cruder.query_logging.enabled', false);
+    }
+
+    /**
+     * Check if a specific operation should be logged.
+     * 
+     * @param string $operation The operation type
+     * @return bool
+     */
+    protected function shouldLogOperation(string $operation): bool
+    {
+        if (config('cruder.query_logging.log_all_operations', true)) {
+            return true;
+        }
+
+        return config("cruder.query_logging.operations.{$operation}", false);
+    }
+
+    /**
+     * Check if we should only log slow queries.
+     * 
+     * @return bool
+     */
+    protected function shouldOnlyLogSlowQueries(): bool
+    {
+        return config('cruder.query_logging.log_slow_queries_only', false);
+    }
+
+    /**
+     * Check if a query is considered slow.
+     * 
+     * @param float $executionTime The execution time in milliseconds
+     * @return bool
+     */
+    protected function isSlowQuery(float $executionTime): bool
+    {
+        $threshold = config('cruder.query_logging.slow_query_threshold', 1000);
+        return $executionTime >= $threshold;
+    }
+
+    /**
+     * Get the appropriate log level based on execution time.
+     * 
+     * @param float $executionTime The execution time in milliseconds
+     * @return string
+     */
+    protected function getLogLevel(float $executionTime): string
+    {
+        if ($this->isSlowQuery($executionTime)) {
+            return config('cruder.performance.slow_query_log_level', 'warning');
+        }
+
+        return config('cruder.query_logging.log_level', 'debug');
+    }
+
+    /**
+     * Prepare log data for a query.
+     * 
+     * @param string $operation The operation type
+     * @param Builder $query The query builder instance
+     * @param float $executionTime The execution time in milliseconds
+     * @param array $context Additional context data
+     * @return array
+     */
+    protected function prepareLogData(string $operation, Builder $query, float $executionTime, array $context): array
+    {
+        $logData = [
+            'operation' => $operation,
+            'sql' => $this->getQueryWithBindings($query),
+            'table' => $query->getModel()->getTable(),
+        ];
+
+        // Add bindings if configured
+        if (config('cruder.query_logging.include_bindings', true)) {
+            $logData['bindings'] = $query->getBindings();
+        }
+
+        // Add execution time if configured
+        if (config('cruder.query_logging.include_execution_time', true)) {
+            $logData['execution_time_ms'] = $executionTime;
+        }
+
+        // Add context data
+        if (!empty($context)) {
+            $logData['context'] = $context;
+        }
+
+        // Add slow query information if applicable
+        if ($this->isSlowQuery($executionTime)) {
+            $logData['slow_query'] = true;
+            $logData['threshold_ms'] = config('cruder.query_logging.slow_query_threshold', 1000);
+        }
+
+        return $logData;
+    }
+
+    /**
+     * Log query data from the query log.
+     * 
+     * @param string $operation The operation type
+     * @param array $queryData The query data from DB::getQueryLog()
+     * @param array $context Additional context data
+     * @return void
+     */
+    protected function logQueryData(string $operation, array $queryData, array $context = []): void
+    {
+        $logData = [
+            'operation' => $operation,
+            'sql' => $queryData['query'],
+            'bindings' => $queryData['bindings'],
+            'time' => $queryData['time'],
+        ];
+
+        if (!empty($context)) {
+            $logData['context'] = $context;
+        }
+
+        $logLevel = config('cruder.query_logging.log_level', 'debug');
+        $this->writeLog($logLevel, $logData);
+    }
+
+    /**
+     * Write the log entry.
+     * 
+     * @param string $level The log level
+     * @param array $data The log data
+     * @return void
+     */
+    protected function writeLog(string $level, array $data): void
+    {
+        $channel = $this->isSlowQuery($data['execution_time_ms'] ?? 0) 
+            ? config('cruder.query_logging.channels.slow_queries', 'single')
+            : config('cruder.query_logging.channels.default', 'single');
+
+        // Combine message and data into a single structured log entry
+        $logData = array_merge(['message' => 'CRUD Query'], $data);
+        Log::channel($channel)->{$level}($logData);
+    }
+}
