@@ -60,7 +60,7 @@ This document provides a comprehensive reference for all available configuration
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | `DIRECT_FILTERABLE_COLUMNS` | array | `[]` | Columns that can be filtered directly | `['status', 'department_id']` |
-| `RELATED_FILTERABLE_COLUMNS` | array | `[]` | Related model columns for filtering | `['department.name', 'profile.age']` |
+| `RELATED_FILTERABLE_COLUMNS` | array | `[]` | Related model columns for filtering | `['department_name', 'profile_age']` |
 
 
 ### Sorting Configuration
@@ -68,14 +68,14 @@ This document provides a comprehensive reference for all available configuration
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | `DIRECT_SORTABLE_COLUMNS` | array | `[]` | Columns that can be sorted directly | `['name', 'created_at']` |
-| `RELATED_SORTABLE_COLUMNS` | array | `[]` | Related model columns for sorting | `['department.name', 'profile.created_at']` |
+| `RELATED_SORTABLE_COLUMNS` | array | `[]` | Related model columns for sorting | `['department_name', 'profile_created_at']` |
 
 ### Search Configuration
 
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | `DIRECT_TEXT_SEARCH_COLUMNS` | array | `[]` | Columns for direct text search | `['name', 'email']` |
-| `RELATED_TEXT_SEARCH_COLUMNS` | array | `[]` | Related model columns for text search | `['department.name', 'profile.bio']` |
+| `RELATED_TEXT_SEARCH_COLUMNS` | array | `[]` | Related model columns for text search | `['department_name', 'profil_.bio']` |
 | `ENABLE_FULLTEXT_SEARCH` | bool | `false` | Enable full-text search | `true` |
 | `FULLTEXT_SEARCH_COLUMNS` | array | `[]` | Columns for full-text search | `['title', 'content']` |
 
@@ -227,14 +227,6 @@ This document provides a comprehensive reference for all available configuration
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
 | `{column}` | mixed | Direct column filter | `?status=active` |
-| `{column}_gte` | numeric | Greater than or equal | `?age_gte=25` |
-| `{column}_gt` | numeric | Greater than | `?salary_gt=50000` |
-| `{column}_lte` | numeric | Less than or equal | `?age_lte=65` |
-| `{column}_lt` | numeric | Less than | `?price_lt=1000` |
-| `{column}_from` | date | Date range from | `?created_at_from=2024-01-01` |
-| `{column}_to` | date | Date range to | `?created_at_to=2024-12-31` |
-| `{column}_min` | numeric | Numeric range minimum | `?price_min=100` |
-| `{column}_max` | numeric | Numeric range maximum | `?price_max=500` |
 
 ### Export Parameters
 
@@ -246,7 +238,7 @@ This document provides a comprehensive reference for all available configuration
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| `search_suggestions` | string | Get search suggestions | `?search_suggestions=john&limit=5` |
+| `search` | string | Get search suggestions | `?search=john&limit=5` |
 
 
 ---
