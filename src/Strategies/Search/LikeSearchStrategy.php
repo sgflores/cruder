@@ -1,0 +1,82 @@
+<?php
+
+namespace SgFlores\Cruder\Strategies\Search;
+
+use Illuminate\Database\Eloquent\Builder;
+
+/**
+ * LIKE search strategy implementation.
+ * 
+ * Provides traditional LIKE-based search functionality for both direct
+ * and related model columns. This strategy is more compatible across
+ * different database systems.
+ */
+class LikeSearchStrategy implements SearchStrategyInterface
+{
+    /**
+     * Applies LIKE search to the query.
+     * 
+     * @param Builder $query The Eloquent query builder instance
+     * @param string $term The search term
+     * @param array $config Search configuration
+     * @return Builder The modified query builder
+     */
+    public function search(Builder $query, string $term, array $config): Builder
+    {
+        $directColumns = $config['direct_columns'] ?? [];
+        $relatedColumns = $config['related_columns'] ?? [];
+        
+        $query->where(function (Builder $subQuery) use ($term, $directColumns, $relatedColumns) {
+            // Search direct columns
+            foreach ($directColumns as $column) {
+                $subQuery->orWhere($column, 'like', '%' . $term . '%');
+            }
+            
+            // Search related columns
+            foreach ($relatedColumns as $column) {
+                $relationParts = $this->parseRelationColumn($column);
+                if (!empty($relationParts['relation'])) {
+                    $subQuery->orWhereHas($relationParts['relation'], function (Builder $relationQuery) use ($relationParts, $term) {
+                        $relationQuery->where($relationParts['column'], 'like', '%' . $term . '%');
+                    });
+                }
+            }
+        });
+        
+        return $query;
+    }
+
+    /**
+     * Parses a relation column string to extract relation and column names.
+     * 
+     * @param string $columnString The column string to parse
+     * @return array Array with 'relation' and 'column' keys
+     */
+    private function parseRelationColumn(string $columnString): array
+    {
+        // Find the last occurrence of either dot or underscore
+        $lastDotPos = strrpos($columnString, '.');
+        $lastUnderscorePos = strrpos($columnString, '_');
+        
+        // Determine which separator comes last
+        if ($lastDotPos === false && $lastUnderscorePos === false) {
+            return ['relation' => '', 'column' => $columnString];
+        }
+        
+        if ($lastDotPos === false) {
+            $splitPos = $lastUnderscorePos;
+        } elseif ($lastUnderscorePos === false) {
+            $splitPos = $lastDotPos;
+        } else {
+            $splitPos = max($lastDotPos, $lastUnderscorePos);
+        }
+        
+        $relation = substr($columnString, 0, $splitPos);
+        $column = substr($columnString, $splitPos + 1);
+        
+        return [
+            'relation' => $relation,
+            'column' => $column
+        ];
+    }
+}
