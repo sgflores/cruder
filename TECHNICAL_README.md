@@ -163,196 +163,39 @@ protected const RELATED_FILTERABLE_COLUMNS = [
     'department_name', 'profile_age', 'company_location'
 ];
 
-// Usage: GET /users?filters[department_name]=Engineering
+// Usage: GET /users?department_name=Engineering
 ```
 
 **Filtering Implementation:**
-```php
-protected function applyColumnFilters(Builder $queryBuilder, array $queryOptions): void
-{
-    $allowedColumns = array_merge(
-        static::DIRECT_FILTERABLE_COLUMNS,
-        static::RELATED_FILTERABLE_COLUMNS
-    );
-    
-    foreach ($queryOptions as $column => $value) {
-        if ($this->isReservedParameterKey($column)) {
-            continue;
-        }
-        
-        // Validate column is allowed
-        if (!in_array($column, $allowedColumns)) {
-            throw new InvalidArgumentException(
-                "Filtered column '{$column}' is not declared. Allowed columns: " . implode(', ', $allowedColumns)
-            );
-        }
-        
-        // Apply filter based on column type
-        if (in_array($column, static::DIRECT_FILTERABLE_COLUMNS)) {
-            $queryBuilder->where($column, $value);
-        } else {
-            // Handle related column filtering
-            $this->applyRelatedColumnFilter($queryBuilder, $column, $value);
-        }
-    }
-}
-```
+The filtering system validates columns against declared filterable columns and applies appropriate WHERE clauses based on column type (direct vs related).
 
-**Advanced Filtering with Range Operations:**
-```php
-protected function applyAdvancedFilters(Builder $queryBuilder, array $queryOptions): void
-{
-    $advancedFilters = [
-        'gte' => '>=', 'gt' => '>', 'lte' => '<=', 'lt' => '<',
-        'from' => '>=', 'to' => '<=', 'min' => '>=', 'max' => '<='
-    ];
-    
-    foreach ($queryOptions as $column => $filters) {
-        if (!is_array($filters)) continue;
-        
-        foreach ($filters as $operator => $value) {
-            if (isset($advancedFilters[$operator])) {
-                $queryBuilder->where($column, $advancedFilters[$operator], $value);
-            }
-        }
-    }
-}
-```
+**Advanced Filtering:**
+Supports range operations with operators like `gte`, `gt`, `lte`, `lt`, `from`, `to`, `min`, `max` for complex filtering scenarios.
 
 #### 4. Caching System
-```php
-protected function buildCacheKey(array $filters, string $operation = 'all'): string
-{
-    return sprintf(
-        '%s:%s:%s:%s',
-        $this->model->getTable(),
-        $operation,
-        md5(json_encode($filters)),
-        Auth::id() ?? 'guest'
-    );
-}
-```
+Cache keys are built using table name, operation type, filter hash, and user context for security and uniqueness.
 
 ## 🚀 Service Implementations
 
 ### ExportService
 
-The `ExportService` uses the Strategy Pattern to provide flexible export functionality:
+The `ExportService` uses the Strategy Pattern to provide flexible export functionality with pluggable strategies for different formats (CSV, JSON, etc.).
 
-```php
-class ExportService
-{
-    protected array $strategies = [
-        'csv' => CsvExportStrategy::class,
-        'json' => JsonExportStrategy::class,
-    ];
-    
-    public function export(string $format, Collection $data, array $options = []): string
-    {
-        $strategy = $this->getStrategy($format);
-        return $strategy->export($data, $options);
-    }
-}
-```
-
-**Real-world Example:**
-```php
-// Export user data to CSV
-$csv = $userService->export('csv', ['department_id' => 1], ['name', 'email']);
-
-// Export product catalog to JSON
-$json = $productService->export('json', ['category_id' => 2], [], ['pretty' => true]);
-```
 
 ### SearchService
 
-The `SearchService` provides intelligent search capabilities:
+The `SearchService` provides intelligent search capabilities with configurable strategies (LIKE, full-text, etc.).
 
-```php
-class SearchService
-{
-    protected array $strategies = [
-        'like' => LikeSearchStrategy::class,
-        'fulltext' => FullTextSearchStrategy::class,
-    ];
-    
-    public function search(Builder $query, string $term, array $columns): Builder
-    {
-        $strategy = $this->getStrategy($this->getSearchStrategy());
-        return $strategy->search($query, $term, $columns);
-    }
-}
-```
-
-**Real-world Example:**
-```php
-// Search users by name or email
-$users = $userService->findAll(['search' => 'john']);
-
-// Search suggestions
-$suggestions = $userService->getSearchSuggestions('john', 5);
-```
 
 ### HookService
 
-The `HookService` provides a flexible hook system for custom business logic:
+The `HookService` provides a flexible hook system for custom business logic with support for before/after operations.
 
-```php
-class HookService
-{
-    protected array $hooks = [];
-    
-    public function addHook(string $operation, HookInterface $hook): void
-    public function executeHooks(string $operation, $data): mixed
-    public function getAvailableOperations(): array
-    public function getHooksForOperation(string $operation): array
-    public function hasHooks(string $operation): bool
-}
-```
-
-**Real-world Example:**
-```php
-// Register a hook for user creation
-$userService->addHook('before_create', function($data) {
-    $data['created_by'] = Auth::id();
-    return $data;
-});
-
-// Register a hook for data validation
-$userService->addHook('after_update', function($data) {
-    // Send notification email
-    Mail::to($data['email'])->send(new UserUpdatedNotification($data));
-    return $data;
-});
-```
 
 ### QueryLogger
 
-The `QueryLogger` provides comprehensive query logging with performance monitoring:
+The `QueryLogger` provides comprehensive query logging with performance monitoring, execution time tracking, and configurable log levels.
 
-```php
-class QueryLogger
-{
-    public function logQuery(string $operation, Builder $query, float $executionTime = 0, array $context = []): void
-    {
-        // Log query with context, execution time, and bindings
-        $logData = $this->prepareLogData($operation, $query, $executionTime, $context);
-        $this->writeLog($this->getLogLevel($executionTime), $logData);
-    }
-}
-```
-
-**Real-world Example:**
-```php
-// Enable query logging in config/cruder.php
-'query_logging' => [
-    'enabled' => true,
-    'log_all_operations' => true,
-    'slow_query_threshold' => 1000, // 1 second
-    'include_bindings' => true,
-    'include_execution_time' => true,
-],
-```
 
 ## 🔄 Data Flow
 
@@ -416,165 +259,20 @@ Store in Cache
 Return Data
 ```
 
-## 🎯 Real-World Use Cases
-
-### 1. E-commerce Product Management
-
-```php
-class ProductService extends BaseCrudService
-{
-    public function __construct(Product $product)
-    {
-        parent::__construct($product);
-    }
-    
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'category_id', 'brand_id', 'price', 'in_stock', 'status'
-    ];
-    
-    protected const DIRECT_SORTABLE_COLUMNS = [
-        'name', 'price', 'created_at', 'updated_at'
-    ];
-    
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
-        'name', 'description', 'sku'
-    ];
-}
-
-// Usage
-$products = $productService->findAll([
-    'category_id' => 1,
-    'price_min' => 100,
-    'price_max' => 500,
-    'in_stock' => true,
-    'sort_by' => 'price',
-    'sort_direction' => 'asc',
-    'search' => 'laptop',
-    'page' => 1,
-    'limit' => 20
-]);
-```
-
-### 2. User Management System
-
-```php
-class UserService extends BaseCrudService
-{
-    public function __construct(User $user)
-    {
-        parent::__construct($user);
-    }
-    
-    protected const CREATE_VALIDATION_RULES = [
-        'name' => 'required|string|max:255',
-        'email' => 'required|email|unique:users',
-        'role' => 'required|in:admin,user,moderator',
-        'department_id' => 'required|exists:departments,id'
-    ];
-    
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'role', 'department_id', 'status', 'created_at'
-    ];
-}
-
-// Usage
-$users = $userService->findAll([
-    'role' => 'user',
-    'department_id' => 2,
-    'status' => 'active',
-    'search' => 'john',
-    'sort_by' => 'created_at',
-    'sort_direction' => 'desc'
-]);
-```
-
-### 3. Content Management System
-
-```php
-class ArticleService extends BaseCrudService
-{
-    public function __construct(Article $article)
-    {
-        parent::__construct($article);
-    }
-    
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
-        'title', 'content', 'excerpt'
-    ];
-    
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'status', 'category_id', 'author_id', 'published_at'
-    ];
-}
-
-// Usage
-$articles = $articleService->findAll([
-    'status' => 'published',
-    'category_id' => 3,
-    'search' => 'laravel tutorial',
-    'sort_by' => 'published_at',
-    'sort_direction' => 'desc'
-], ['author', 'category']);
-```
 
 ## 🔧 Extension Points
 
 ### 1. Custom Export Strategies
 
-```php
-class ExcelExportStrategy implements ExportStrategyInterface
-{
-    public function export(Collection $data, array $options = []): string
-    {
-        // Implement Excel export logic
-        return $excelContent;
-    }
-}
-
-// Register in ExportService
-$exportService->addStrategy('excel', new ExcelExportStrategy());
-```
+Implement `ExportStrategyInterface` to create custom export formats (Excel, PDF, etc.).
 
 ### 2. Custom Search Strategies
 
-```php
-class ElasticsearchStrategy implements SearchStrategyInterface
-{
-    public function search(Builder $query, string $term, array $columns): Builder
-    {
-        // Implement Elasticsearch search logic
-        return $query;
-    }
-}
-
-// Register in SearchService
-$searchService->addStrategy('elasticsearch', new ElasticsearchStrategy());
-```
+Implement `SearchStrategyInterface` to create custom search strategies (Elasticsearch, Algolia, etc.).
 
 ### 3. Custom Hooks
 
-```php
-class AuditLogHook implements HookInterface
-{
-    public function execute(array $data, array $context = []): array
-    {
-        // Log the operation for audit purposes
-        AuditLog::create([
-            'user_id' => Auth::id(),
-            'action' => $context['operation'],
-            'model' => $context['model'],
-            'data' => $data
-        ]);
-        
-        return $data;
-    }
-}
-
-// Register hook
-$hookService->addHook('after_create', new AuditLogHook());
-$hookService->addHook('after_update', new AuditLogHook());
-$hookService->addHook('after_delete', new AuditLogHook());
-```
+Implement `HookInterface` to create custom business logic hooks for audit logging, notifications, etc.
 
 ## 🚀 Performance Considerations
 
