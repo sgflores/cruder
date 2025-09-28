@@ -93,49 +93,15 @@ CRUDER_SLOW_QUERY_LOG_CHANNEL=single
 
 ### Automatic Logging
 
-Once enabled, all CRUD operations will automatically log their queries:
-
-```php
-$userService = new UserService();
-
-// This will log the query if enabled
-$users = $userService->findAll();
-
-// This will also log the query
-$user = $userService->create(['name' => 'John Doe']);
-```
+Once enabled, all CRUD operations will automatically log their queries.
 
 ### Manual Query Logging
 
-You can also access the query logger directly:
-
-```php
-$userService = new UserService();
-$queryLogger = $userService->getQueryLogger();
-
-// Log a custom query
-$queryLogger->logQuery('custom', $query, $executionTime, ['context' => 'data']);
-```
+Access the query logger directly via `$userService->getQueryLogger()` for custom logging.
 
 ## Log Output
 
-The query logs include the following information:
-
-```json
-{
-    "operation": "find",
-    "sql": "select * from `users` where `deleted_at` is null",
-    "bindings": [],
-    "table": "users",
-    "execution_time_ms": 15.5,
-    "context": {
-        "filters": [],
-        "is_paginated": false,
-        "result_count": 10
-    },
-    "slow_query": false
-}
-```
+The query logs include operation type, SQL query, bindings, table name, execution time, context data, and slow query indicators.
 
 ## Performance Considerations
 

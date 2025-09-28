@@ -175,7 +175,7 @@ class UserController extends Controller
     public function destroy($id)
     {
         $this->userService->delete($id);
-        
+    
         return response()->json(null, 204);
     }
 }
@@ -310,52 +310,6 @@ Advanced filtering uses associative arrays with two required keys:
 | `is_not_null` | IS NOT NULL | `['operator' => 'is_not_null', 'value' => null]` |
 
 
-### Complete Filtering Example
-
-```php
-<?php
-
-namespace App\Services;
-
-use SgFlores\Cruder\BaseCrudService;
-use App\Models\User;
-
-class UserService extends BaseCrudService
-{
-    public function __construct(User $user)
-    {
-        parent::__construct($user);
-    }
-    
-    // Direct column filtering (columns on users table)
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'status', 'role', 'is_active', 'created_at', 'age', 'salary'
-    ];
-    
-    // Related column filtering (columns on related models)
-    protected const RELATED_FILTERABLE_COLUMNS = [
-        'department_name', 'department_location', 'profile_bio', 'company_size'
-    ];
-    
-    // Searchable columns
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
-        'name', 'email', 'phone'
-    ];
-    
-    protected const RELATED_TEXT_SEARCH_COLUMNS = [
-        'department_name', 'profile_bio'
-    ];
-    
-    // Sortable columns
-    protected const DIRECT_SORTABLE_COLUMNS = [
-        'name', 'email', 'created_at', 'age', 'salary'
-    ];
-    
-    protected const RELATED_SORTABLE_COLUMNS = [
-        'department_name', 'company_size'
-    ];
-}
-```
 
 
 ### Security Features
@@ -374,32 +328,6 @@ GET /users?invalid_column=value
 // Allowed columns: status, department_id, role, created_at"
 ```
 
-### Basic CRUD Operations
-
-```php
-// Get all users
-GET /users
-
-// Get user by ID
-GET /users/1
-
-// Create user
-POST /users
-{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "department_id": 1
-}
-
-// Update user
-PUT /users/1
-{
-    "name": "John Smith"
-}
-
-// Delete user
-DELETE /users/1
-```
 
 
 ## 🔧 Overridable Methods
@@ -514,8 +442,8 @@ protected function transformResponse($data, array $filters = []): mixed
         ];
     }
     
-    return $data;
-}
+        return $data;
+    }
 ```
 
 ### Cache Management Methods
@@ -556,18 +484,7 @@ protected function configureServices(): void
 
 ### 🚀 Query Logging
 
-Cruder includes comprehensive query logging with performance monitoring:
-
-```php
-// Enable in config/cruder.php
-'query_logging' => [
-    'enabled' => true,
-    'log_all_operations' => true,
-    'slow_query_threshold' => 1000, // 1 second
-    'include_bindings' => true,
-    'include_execution_time' => true,
-],
-```
+Cruder includes comprehensive query logging with performance monitoring. See [QUERY_LOGGING.md](QUERY_LOGGING.md) for detailed configuration.
 
 **Benefits:**
 - Monitor query performance
@@ -577,21 +494,7 @@ Cruder includes comprehensive query logging with performance monitoring:
 
 ### 🪝 Hook System
 
-Extensible hook system for custom business logic:
-
-```php
-// Register hooks using the service method
-$userService->addHook('before_create', function($data) {
-    $data['created_by'] = Auth::id();
-    return $data;
-});
-
-$userService->addHook('after_update', function($data) {
-    // Send notification
-    Mail::to($data['email'])->send(new UserUpdatedNotification($data));
-    return $data;
-});
-```
+Extensible hook system for custom business logic. See [TECHNICAL_README.md](TECHNICAL_README.md) for implementation details.
 
 **Available Hooks:**
 - `before_create` / `after_create`
@@ -600,15 +503,7 @@ $userService->addHook('after_update', function($data) {
 
 ### 📤 Export Service
 
-Flexible export functionality with strategy pattern:
-
-```php
-// Export to CSV
-$csv = $userService->export('csv', [], ['name', 'email', 'created_at']);
-
-// Export to JSON
-$json = $userService->export('json', [], [], ['pretty' => true]);
-```
+Flexible export functionality with strategy pattern. See [TECHNICAL_README.md](TECHNICAL_README.md) for implementation details.
 
 **Supported Formats:**
 - CSV with customizable delimiters
@@ -617,15 +512,7 @@ $json = $userService->export('json', [], [], ['pretty' => true]);
 
 ### 🔍 Advanced Search
 
-Intelligent search with multiple strategies:
-
-```php
-// Like search (default)
-$users = $userService->findAll(['search' => 'john']);
-
-// Search suggestions
-$suggestions = $userService->getSearchSuggestions('john', 5);
-```
+Intelligent search with multiple strategies. See [TECHNICAL_README.md](TECHNICAL_README.md) for implementation details.
 
 **Search Features:**
 - Text search across declared searchable columns
@@ -634,20 +521,7 @@ $suggestions = $userService->getSearchSuggestions('john', 5);
 
 ### ⚡ Performance Features
 
-Built-in performance optimizations:
-
-```php
-// Smart caching
-protected const QUERY_CACHE_ENABLED = true;
-protected const CACHE_LIFETIME_SECONDS = 3600;
-
-// Chunked processing for large datasets
-protected const ENABLE_CHUNKED_PROCESSING = true;
-protected const CHUNK_SIZE = 1000;
-
-// Pagination
-GET /users?page=1&limit=20
-```
+Built-in performance optimizations. See [OPTIONS_README.md](OPTIONS_README.md) for configuration options.
 
 **Performance Benefits:**
 - Query result caching

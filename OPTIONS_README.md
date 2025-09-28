@@ -21,7 +21,6 @@ This document provides a comprehensive reference for all available configuration
 
 | Constant | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
-| `$model` | string | Required | Eloquent model class | `User::class` |
 | `QUERY_CACHE_ENABLED` | bool | `false` | Enable query caching | `true` |
 | `CACHE_LIFETIME_SECONDS` | int | `3600` | Cache lifetime in seconds | `7200` |
 | `CACHE_TAGS` | array | `[]` | Cache tags for invalidation | `['users', 'test']` |
@@ -63,47 +62,6 @@ This document provides a comprehensive reference for all available configuration
 | `DIRECT_FILTERABLE_COLUMNS` | array | `[]` | Columns that can be filtered directly | `['status', 'department_id']` |
 | `RELATED_FILTERABLE_COLUMNS` | array | `[]` | Related model columns for filtering | `['department.name', 'profile.age']` |
 
-#### Filtering Examples
-
-**Direct Column Filtering:**
-```php
-// Service configuration
-protected const DIRECT_FILTERABLE_COLUMNS = [
-    'status', 'role', 'department_id', 'is_active', 'created_at'
-];
-
-// URL usage
-GET /users?status=active&role=admin&department_id=1
-GET /users?is_active=true&status=active
-```
-
-**Related Column Filtering:**
-```php
-// Service configuration
-protected const RELATED_FILTERABLE_COLUMNS = [
-    'department_name', 'department_location', 'profile_age', 'company_size'
-];
-
-// URL usage
-GET /users?filters[department_name]=Engineering
-GET /users?filters[department_location]=New York
-GET /users?filters[profile_age][min]=25&filters[profile_age][max]=65
-GET /users?filters[company_size]=large
-```
-
-**Advanced Range Filtering:**
-```php
-// Date range filtering
-GET /users?filters[created_at][from]=2024-01-01&filters[created_at][to]=2024-12-31
-
-// Numeric range filtering
-GET /users?filters[salary][gte]=50000&filters[salary][lte]=100000
-GET /users?filters[age][min]=25&filters[age][max]=65
-
-// Comparison operators
-GET /users?filters[experience_years][gt]=5
-GET /users?filters[last_login_at][lt]=2024-01-01
-```
 
 ### Sorting Configuration
 
@@ -137,27 +95,6 @@ GET /users?filters[last_login_at][lt]=2024-01-01
 | `CREATE_VALIDATION_RULES` | array | `[]` | Validation rules for create operations | `['name' => 'required\|string']` |
 | `UPDATE_VALIDATION_RULES` | array | `[]` | Validation rules for update operations | `['name' => 'sometimes\|string']` |
 
-### Example Validation Rules
-
-```php
-protected const CREATE_VALIDATION_RULES = [
-    'name' => 'required|string|max:255',
-    'email' => 'required|email|unique:users',
-    'password' => 'required|string|min:8',
-    'department_id' => 'required|exists:departments,id',
-    'status' => 'required|in:active,inactive',
-    'role' => 'required|in:admin,user,moderator'
-];
-
-protected const UPDATE_VALIDATION_RULES = [
-    'name' => 'sometimes|string|max:255',
-    'email' => 'sometimes|email|unique:users,email,{id}',
-    'password' => 'sometimes|string|min:8',
-    'department_id' => 'sometimes|exists:departments,id',
-    'status' => 'sometimes|in:active,inactive',
-    'role' => 'sometimes|in:admin,user,moderator'
-];
-```
 
 ## 📤 Export Configuration
 
@@ -290,11 +227,14 @@ protected const UPDATE_VALIDATION_RULES = [
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
 | `{column}` | mixed | Direct column filter | `?status=active` |
-| `filters[{column}]` | mixed | Advanced column filter | `?filters[status]=active` |
-| `filters[{column}][from]` | date | Date range from | `?filters[created_at][from]=2024-01-01` |
-| `filters[{column}][to]` | date | Date range to | `?filters[created_at][to]=2024-12-31` |
-| `filters[{column}][min]` | numeric | Numeric range minimum | `?filters[price][min]=100` |
-| `filters[{column}][max]` | numeric | Numeric range maximum | `?filters[price][max]=500` |
+| `{column}_gte` | numeric | Greater than or equal | `?age_gte=25` |
+| `{column}_gt` | numeric | Greater than | `?salary_gt=50000` |
+| `{column}_lte` | numeric | Less than or equal | `?age_lte=65` |
+| `{column}_lt` | numeric | Less than | `?price_lt=1000` |
+| `{column}_from` | date | Date range from | `?created_at_from=2024-01-01` |
+| `{column}_to` | date | Date range to | `?created_at_to=2024-12-31` |
+| `{column}_min` | numeric | Numeric range minimum | `?price_min=100` |
+| `{column}_max` | numeric | Numeric range maximum | `?price_max=500` |
 
 ### Export Parameters
 
@@ -308,116 +248,6 @@ protected const UPDATE_VALIDATION_RULES = [
 |-----------|------|-------------|---------|
 | `search_suggestions` | string | Get search suggestions | `?search_suggestions=john&limit=5` |
 
-## 🔧 Configuration Examples
-
-### Complete Service Configuration
-
-```php
-<?php
-
-namespace App\Services;
-
-use SgFlores\Cruder\BaseCrudService;
-use App\Models\User;
-
-class UserService extends BaseCrudService
-{
-    public function __construct(User $user)
-    {
-        parent::__construct($user);
-    }
-    
-    // Core configuration
-    
-    // Caching configuration
-    protected const QUERY_CACHE_ENABLED = true;
-    protected const CACHE_LIFETIME_SECONDS = 3600;
-    protected const CACHE_TAGS = ['users', 'test'];
-    
-    // Soft delete configuration
-    protected const INCLUDE_SOFT_DELETED = false;
-    protected const ONLY_SOFT_DELETED = false;
-    
-    // API resources configuration
-    protected const ENABLE_API_RESOURCES = false;
-    protected const API_RESOURCE_CLASS = null;
-    
-    // Chunked processing configuration
-    protected const ENABLE_CHUNKED_PROCESSING = false;
-    protected const CHUNK_SIZE = 1000;
-    
-    // Field selection
-    protected const SELECT_COLUMNS = [];
-    protected const EXCLUDE_COLUMNS = ['password', 'remember_token'];
-    
-    // Validation rules
-    protected const CREATE_VALIDATION_RULES = [
-        'name' => 'required|string|max:255',
-        'email' => 'required|email|unique:users',
-        'department_id' => 'required|exists:departments,id'
-    ];
-    
-    protected const UPDATE_VALIDATION_RULES = [
-        'name' => 'sometimes|string|max:255',
-        'email' => 'sometimes|email|unique:users,email,{id}',
-        'department_id' => 'sometimes|exists:departments,id'
-    ];
-    
-    // Column configuration
-    protected const DIRECT_FILTERABLE_COLUMNS = ['department_id', 'status'];
-    protected const RELATED_FILTERABLE_COLUMNS = ['department_name'];
-    
-    protected const DIRECT_SORTABLE_COLUMNS = ['name', 'email', 'created_at'];
-    protected const RELATED_SORTABLE_COLUMNS = ['department_name'];
-    
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name', 'email'];
-    protected const RELATED_TEXT_SEARCH_COLUMNS = ['department_name'];
-    
-    // Search configuration
-    protected const ENABLE_FULLTEXT_SEARCH = false;
-    protected const FULLTEXT_SEARCH_COLUMNS = [];
-    
-    // Pagination configuration
-    protected const PAGINATE_PARAM = 'page';
-    protected const LIMIT_PARAM = 'limit';
-}
-```
-
-### Query Logging Configuration
-
-```php
-// config/cruder.php
-return [
-    'query_logging' => [
-        'enabled' => env('CRUDER_QUERY_LOGGING_ENABLED', false),
-        'log_all_operations' => env('CRUDER_LOG_ALL_OPERATIONS', true),
-        'operations' => [
-            'find' => env('CRUDER_LOG_FIND_OPERATIONS', true),
-            'create' => env('CRUDER_LOG_CREATE_OPERATIONS', true),
-            'update' => env('CRUDER_LOG_UPDATE_OPERATIONS', true),
-            'delete' => env('CRUDER_LOG_DELETE_OPERATIONS', true),
-            'count' => env('CRUDER_LOG_COUNT_OPERATIONS', true),
-            'bulkCreate' => env('CRUDER_LOG_BULK_CREATE_OPERATIONS', true),
-            'bulkUpdate' => env('CRUDER_LOG_BULK_UPDATE_OPERATIONS', true),
-            'bulkDelete' => env('CRUDER_LOG_BULK_DELETE_OPERATIONS', true),
-            'export' => env('CRUDER_LOG_EXPORT_OPERATIONS', true),
-            'searchSuggestions' => env('CRUDER_LOG_SEARCH_SUGGESTIONS_OPERATIONS', true),
-        ],
-        'log_level' => env('CRUDER_QUERY_LOG_LEVEL', 'debug'),
-        'include_bindings' => env('CRUDER_INCLUDE_BINDINGS', true),
-        'include_execution_time' => env('CRUDER_INCLUDE_EXECUTION_TIME', true),
-        'log_slow_queries_only' => env('CRUDER_LOG_SLOW_QUERIES_ONLY', false),
-        'slow_query_threshold' => env('CRUDER_SLOW_QUERY_THRESHOLD', 1000),
-        'channels' => [
-            'default' => env('CRUDER_QUERY_LOG_CHANNEL', 'single'),
-            'slow_queries' => env('CRUDER_SLOW_QUERY_LOG_CHANNEL', 'single'),
-        ],
-    ],
-    'performance' => [
-        'slow_query_log_level' => env('CRUDER_PERFORMANCE_SLOW_QUERY_LOG_LEVEL', 'warning'),
-    ],
-];
-```
 
 ---
 
