@@ -669,16 +669,17 @@ abstract class BaseReaderService
                 
                 // Apply like strategy with configuration
                 $config = [
+                    'term' => $filters[static::SEARCH_PARAM] ?? '',
                     'type' => 'like',
                     'enabled' => true,
                     'direct_columns' => static::DIRECT_TEXT_SEARCH_COLUMNS,
                     'related_columns' => static::RELATED_TEXT_SEARCH_COLUMNS
                 ];
-                
-                $this->searchService->search($query, $filters, null, $config);
+
+                $this->searchService->search($query, $filters, $config);
             } else {
                 // Apply custom strategy directly
-                $this->searchService->search($query, $filters, null, [
+                $this->searchService->search($query, $filters, [
                     'type' => $strategyName,
                     'enabled' => true
                 ]);

@@ -18,14 +18,12 @@ class LikeSearchStrategy implements SearchStrategyInterface
      * 
      * @param Builder $query The Eloquent query builder instance
      * @param array $filters Array of query options
-     * @param string|null $searchTerm Optional search term
      * @param array $config Optional search configuration
      * @return Builder The modified query builder
      */
-    public function search(Builder $query, array $filters, ?string $searchTerm = null, array $config = []): Builder
+    public function search(Builder $query, array $filters, array $config = []): Builder
     {
-        // Use searchTerm parameter if provided, otherwise extract from filters
-        $term = $searchTerm ?? $filters['search'] ?? '';
+        $term = $config['term'] ?? '';
         
         // Ensure term is a string
         if (is_array($term)) {

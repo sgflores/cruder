@@ -1,412 +1,330 @@
-# CRUDer Architecture & Lifecycle
+# CRUDer Package Architecture
 
-## 🏗️ Overall Application Architecture
+## 🎯 Overview
 
-The CRUDer package is built on **SOLID principles** and follows **Laravel best practices** to provide a comprehensive CRUD solution. The architecture is designed to be:
+The CRUDer package is a comprehensive Laravel package that provides a robust, extensible CRUD (Create, Read, Update, Delete) solution built on **SOLID principles** and **design patterns**. It offers a clean, maintainable way to handle database operations with built-in features like search, validation, export, and event handling.
 
-- **Extensible**: Easy to add new features and strategies
-- **Maintainable**: Clean separation of concerns
-- **Testable**: Comprehensive test coverage
-- **Performant**: Built-in caching and optimization
-- **Secure**: Column validation and SQL injection prevention
+## 🏗️ Core Architecture Principles
 
-## 🔄 BaseCrudService Lifecycle
+### SOLID Principles Implementation
 
-### 1. **Initialization Phase**
+1. **Single Responsibility Principle (SRP)**
+   - Each service handles one specific concern
+   - `SearchService` only handles search logic
+   - `ValidationService` only handles validation
+   - `ExportService` only handles data export
+
+2. **Open/Closed Principle (OCP)**
+   - Open for extension through strategies
+   - Closed for modification of core functionality
+   - New search/validation/export strategies can be added without changing existing code
+
+3. **Liskov Substitution Principle (LSP)**
+   - Child services can be substituted for parent services
+   - All strategy implementations are interchangeable
+
+4. **Interface Segregation Principle (ISP)**
+   - Clear, focused interfaces for each strategy type
+   - Clients depend only on methods they use
+
+5. **Dependency Inversion Principle (DIP)**
+   - High-level modules depend on abstractions (interfaces)
+   - Low-level modules implement these abstractions
+
+## 🧩 Design Patterns
+
+### 1. Strategy Pattern
+**Purpose**: Interchangeable algorithms for search, validation, and export operations.
+
+**Implementation**:
+- `SearchStrategyInterface` - Different search algorithms (LIKE, full-text, custom)
+- `ValidationStrategyInterface` - Different validation approaches (array rules, custom logic)
+- `ExportStrategyInterface` - Different export formats (CSV, JSON, XML)
+
+### 2. Template Method Pattern
+**Purpose**: Defines the skeleton of operations while allowing subclasses to override specific steps.
+
+**Implementation**:
+- `BaseReaderService` - Template for read operations
+- `BaseCrudService` - Template for CRUD operations extending read operations
+
+### 3. Observer Pattern
+**Purpose**: Event-driven architecture for loose coupling between components.
+
+**Implementation**:
+- `EventService` - Manages event listeners and firing
+- Before/after hooks for create, update, delete operations
+
+### 4. Factory Pattern
+**Purpose**: Creates appropriate strategy instances based on configuration.
+
+**Implementation**:
+- `ValidationFactory` - Creates validation strategies
+- Service factories for strategy instantiation
+
+## 📦 Core Components
+
+### Base Services
+
+#### BaseReaderService
+**Purpose**: Abstract base class for read-only operations.
+
+**Key Features**:
+- Data filtering and search
+- Sorting and pagination
+- Relationship loading
+- Query optimization
+- Export functionality
+
+**Column Security**:
 ```php
-// Constructor sets up the model and initializes services
-public function __construct(Model $model)
-{
-    $this->model = $model;
-    $this->initializeServices();
-    $this->setupEventListeners();
-    $this->configureServices();
-}
+protected const DIRECT_FILTERABLE_COLUMNS = ['status', 'department_id'];
+protected const DIRECT_SORTABLE_COLUMNS = ['name', 'created_at'];
+protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name', 'email'];
 ```
 
-**What happens:**
-- Model is set and validated
-- Services are initialized (Search, Export, Event, Validation, QueryLogger)
-- Event listeners are set up
-- Custom services are configured
-- Default strategies are registered
+#### BaseCrudService
+**Purpose**: Extends BaseReaderService to provide full CRUD operations.
 
-### 2. **Read Operations Lifecycle**
+**Additional Features**:
+- Create, update, delete operations
+- Data validation
+- Event handling
+- Audit trail
+- Bulk operations
 
-#### `findAll()` Method Flow:
-```php
-findAll(array $filters = [], array $withRelations = [])
-├── 1. Apply soft delete constraints
-├── 2. Apply field selection (SELECT specific columns)
-├── 3. Apply search strategies (like, custom)
-├── 4. Apply column filters (exact matches)
-├── 5. Apply advanced filters (operators)
-├── 6. Apply sorting
-├── 7. Apply pagination
-├── 8. Execute query with caching
-├── 9. Load relationships
-├── 10. Transform response
-└── 11. Return results
+### Supporting Services
+
+#### SearchService
+**Purpose**: Manages search strategies and applies them to queries.
+
+**Responsibilities**:
+- Register search strategies
+- Apply search logic to query builders
+- Handle different search types (LIKE, full-text, custom)
+
+#### ValidationService
+**Purpose**: Manages validation strategies for data integrity.
+
+**Responsibilities**:
+- Validate input data
+- Support multiple validation approaches
+- Handle validation errors
+
+#### ExportService
+**Purpose**: Handles data export in various formats.
+
+**Responsibilities**:
+- Register export strategies
+- Convert data to different formats
+- Handle export options
+
+#### EventService
+**Purpose**: Provides event-driven architecture for business logic.
+
+**Responsibilities**:
+- Register event listeners
+- Fire events at appropriate times
+- Support before/after operation hooks
+
+## 🔄 Request Lifecycle
+
+### 1. Service Initialization
+```
+Constructor Call
+├── Model Assignment
+├── Service Initialization (Search, Export, Event, Validation)
+├── Default Strategy Registration
+└── Custom Service Configuration
 ```
 
-#### `findById()` Method Flow:
-```php
-findById(int $id, array $withRelations = [])
-├── 1. Apply soft delete constraints
-├── 2. Apply field selection
-├── 3. Load relationships
-├── 4. Execute query with caching
-├── 5. Transform response
-└── 6. Return single model
+### 2. Read Operations Lifecycle
+```
+findAll() Request
+├── 1. Column Validation
+├── 2. Query Builder Creation
+├── 3. Search Strategy Application
+├── 4. Filter Application
+├── 5. Sorting Application
+├── 6. Pagination Application
+├── 7. Query Execution with Caching
+├── 8. Relationship Loading
+├── 9. Response Transformation
+└── 10. Return Results
 ```
 
-### 3. **Create Operations Lifecycle**
-
-#### `create()` Method Flow:
-```php
-create(array $data)
-├── 1. Validate input data
-├── 2. Fire 'before_create' event
-├── 3. Prepare create data (audit trail, custom logic)
-├── 4. Create model in database transaction
-├── 5. Fire 'after_create' event
-├── 6. Clear related caches
-├── 7. Log query performance
-└── 8. Return created model
+### 3. Create Operations Lifecycle
+```
+create() Request
+├── 1. Input Validation
+├── 2. Fire 'before_create' Event
+├── 3. Data Preparation
+├── 4. Database Transaction Start
+├── 5. Model Creation
+├── 6. Fire 'after_create' Event
+├── 7. Cache Invalidation
+├── 8. Transaction Commit
+└── 9. Return Created Model
 ```
 
-### 4. **Update Operations Lifecycle**
-
-#### `update()` Method Flow:
-```php
-update(int $id, array $data)
-├── 1. Find existing model
-├── 2. Validate input data
-├── 3. Fire 'before_update' event
-├── 4. Prepare update data (audit trail, custom logic)
-├── 5. Update model in database transaction
-├── 6. Fire 'after_update' event
-├── 7. Clear related caches
-├── 8. Log query performance
-└── 9. Return updated model
+### 4. Update Operations Lifecycle
+```
+update() Request
+├── 1. Model Retrieval
+├── 2. Input Validation
+├── 3. Fire 'before_update' Event
+├── 4. Data Preparation
+├── 5. Database Transaction Start
+├── 6. Model Update
+├── 7. Fire 'after_update' Event
+├── 8. Cache Invalidation
+├── 9. Transaction Commit
+└── 10. Return Updated Model
 ```
 
-### 5. **Delete Operations Lifecycle**
-
-#### `delete()` Method Flow:
-```php
-delete(int $id)
-├── 1. Find existing model
-├── 2. Fire 'before_delete' event
-├── 3. Prepare delete data (custom logic)
-├── 4. Delete model (soft or hard) in database transaction
-├── 5. Fire 'after_delete' event
-├── 6. Clear related caches
-├── 7. Log query performance
-└── 8. Return deletion result
+### 5. Delete Operations Lifecycle
 ```
-
-### 6. **Bulk Operations Lifecycle**
-
-#### `bulkCreate()` Method Flow:
-```php
-bulkCreate(array $dataArray)
-├── 1. Validate all data
-├── 2. Fire 'before_bulk_create' event
-├── 3. Process in chunks for memory efficiency
-├── 4. Create all models in single transaction
-├── 5. Fire 'after_bulk_create' event
-├── 6. Clear related caches
-└── 7. Return created models
+delete() Request
+├── 1. Model Retrieval
+├── 2. Fire 'before_delete' Event
+├── 3. Database Transaction Start
+├── 4. Model Deletion (Soft/Hard)
+├── 5. Fire 'after_delete' Event
+├── 6. Cache Invalidation
+├── 7. Transaction Commit
+└── 8. Return Deletion Result
 ```
-
-## 🔍 BaseReaderService Lifecycle
-
-### 1. **Initialization Phase**
-```php
-// Constructor sets up the model and initializes services
-public function __construct(Model $model)
-{
-    $this->model = $model;
-    $this->initializeServices();
-    $this->setupEventListeners();
-    $this->configureServices();
-}
-```
-
-**What happens:**
-- Model is set and validated
-- Services are initialized (Search, Export, Event, QueryLogger)
-- Event listeners are set up
-- Custom services are configured
-- Default search strategy (like) is registered
-
-### 2. **Read Operations Lifecycle**
-
-#### `findAll()` Method Flow:
-```php
-findAll(array $filters = [], array $withRelations = [])
-├── 1. Apply soft delete constraints
-├── 2. Apply field selection (SELECT specific columns)
-├── 3. Apply search strategies (like, custom)
-├── 4. Apply column filters (exact matches)
-├── 5. Apply advanced filters (operators)
-├── 6. Apply sorting
-├── 7. Apply pagination
-├── 8. Execute query with caching
-├── 9. Load relationships
-├── 10. Transform response
-└── 11. Return results
-```
-
-#### `searchProducts()` Method Flow:
-```php
-searchProducts(string $searchTerm, array $filters = [])
-├── 1. Add search term to filters
-├── 2. Call findAll() with enhanced filters
-└── 3. Return search results
-```
-
-## 🧩 Service Architecture
-
-### 1. **Core Services**
-
-#### **SearchService**
-- **Purpose**: Manages search strategies and applies them to queries
-- **Lifecycle**: Initialized in constructor, strategies registered in configureServices()
-- **Strategies**: LikeSearchStrategy (default), custom strategies
-
-#### **ExportService**
-- **Purpose**: Handles data export in various formats
-- **Lifecycle**: Initialized in constructor, strategies registered in configureServices()
-- **Strategies**: CsvExportStrategy, JsonExportStrategy, custom strategies
-
-#### **EventService**
-- **Purpose**: Manages event listeners and firing
-- **Lifecycle**: Initialized in constructor, listeners set up in setupEventListeners()
-- **Events**: before_create, after_create, before_update, after_update, before_delete, after_delete
-
-#### **ValidationService**
-- **Purpose**: Handles data validation using Laravel Validator
-- **Lifecycle**: Initialized in constructor, rules defined in constants
-- **Validation**: CREATE_VALIDATION_RULES, UPDATE_VALIDATION_RULES
-
-#### **QueryLogger**
-- **Purpose**: Logs queries and performance metrics
-- **Lifecycle**: Initialized in constructor, used throughout operations
-- **Features**: Query logging, slow query detection, performance monitoring
-
-### 2. **Strategy Pattern Implementation**
-
-#### **Search Strategies**
-```php
-interface SearchStrategyInterface
-{
-    public function search(Builder $query, array $filters, ?string $searchTerm = null, array $config = []): Builder;
-}
-```
-
-#### **Export Strategies**
-```php
-interface ExportStrategyInterface
-{
-    public function export(Collection $data, array $options = []): string;
-}
-```
-
-#### **Validation Strategies**
-```php
-interface ValidationStrategyInterface
-{
-    public function validate(array $data, string $operation): array;
-}
-```
-
-## 🔄 Data Flow Architecture
-
-### 1. **Request Flow**
-```
-Controller → Service → Strategy → Database
-    ↓           ↓         ↓         ↓
-  Request   Validation  Strategy  Query
-    ↓           ↓         ↓         ↓
-  Response ← Transform ← Result ← Database
-```
-
-### 2. **Caching Flow**
-```
-Query → Cache Check → Database → Cache Store
-  ↓         ↓           ↓           ↓
-Result ← Cache Hit ← Cache Miss ← Cache Store
-```
-
-### 3. **Event Flow**
-```
-Operation → Before Event → Business Logic → After Event
-    ↓            ↓              ↓              ↓
-  Result ← Event Handler ← Event Handler ← Event Handler
-```
-
-## 🏛️ Design Patterns Used
-
-### 1. **Strategy Pattern**
-- **Search Strategies**: Interchangeable search algorithms
-- **Export Strategies**: Different export formats
-- **Validation Strategies**: Custom validation logic
-
-### 2. **Observer Pattern**
-- **Event System**: Listeners for before/after operations
-- **Hook System**: Extensible business logic
-
-### 3. **Factory Pattern**
-- **ValidationFactory**: Creates validators
-- **Service Factory**: Creates service instances
-
-### 4. **Template Method Pattern**
-- **BaseCrudService**: Defines algorithm structure
-- **BaseReaderService**: Defines read operations structure
-
-### 5. **Dependency Injection**
-- **Service Dependencies**: Injected services
-- **Strategy Dependencies**: Injected strategies
 
 ## 🔧 Configuration Architecture
 
-### 1. **Service Configuration**
+### Service Configuration
+Services are configured through the `configureServices()` method in child classes:
+
 ```php
-// Constants define behavior
-protected const QUERY_CACHE_ENABLED = true;
-protected const CACHE_LIFETIME_SECONDS = 3600;
-protected const AUDIT_TRAIL_ENABLED = true;
+protected function configureServices(): void
+{
+    parent::configureServices();
+    
+    // Add custom search strategies
+    $this->searchService->addStrategy('custom', new CustomSearchStrategy());
+    
+    // Add custom export strategies
+    $this->exportService->addStrategy('xml', new XmlExportStrategy());
+}
 ```
 
-### 2. **Column Configuration**
+### Column Security Configuration
+Column constants define which columns are allowed for operations:
+
 ```php
-// Define allowed columns for security
-protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name', 'email'];
+// Define filterable columns
 protected const DIRECT_FILTERABLE_COLUMNS = ['status', 'department_id'];
+
+// Define sortable columns  
 protected const DIRECT_SORTABLE_COLUMNS = ['name', 'created_at'];
+
+// Define searchable columns
+protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name', 'email'];
 ```
 
-### 3. **Validation Configuration**
-```php
-// Define validation rules
-protected const CREATE_VALIDATION_RULES = [
-    'name' => 'required|string|max:255',
-    'email' => 'required|email|unique:users'
-];
-```
+## 🚀 Performance Features
 
-## 🚀 Performance Architecture
-
-### 1. **Caching Strategy**
-- **Query Caching**: Cache query results
+### Caching Strategy
+- **Query Result Caching**: Cache frequently accessed data
 - **Cache Tags**: Granular cache invalidation
-- **Cache Lifetime**: Configurable cache duration
+- **Configurable Lifetime**: Set cache expiration times
 
-### 2. **Memory Management**
-- **Chunked Processing**: Process large datasets in chunks
-- **Memory Optimization**: Efficient memory usage
+### Memory Management
+- **Chunked Processing**: Handle large datasets efficiently
 - **Lazy Loading**: Load relationships only when needed
+- **Memory Optimization**: Efficient memory usage patterns
 
-### 3. **Query Optimization**
-- **Eager Loading**: Load relationships efficiently
+### Query Optimization
+- **Eager Loading**: Prevent N+1 query problems
 - **Query Logging**: Monitor query performance
-- **Slow Query Detection**: Identify performance issues
+- **Slow Query Detection**: Identify performance bottlenecks
 
 ## 🔒 Security Architecture
 
-### 1. **Column Validation**
+### Column Validation
 - **Whitelist Approach**: Only declared columns are allowed
 - **SQL Injection Prevention**: Column names are validated
-- **Error Handling**: Clear error messages for invalid columns
+- **Clear Error Messages**: Helpful feedback for invalid operations
 
-### 2. **Input Validation**
-- **Laravel Validation**: Uses Laravel's validation system
-- **Custom Rules**: Support for custom validation rules
-- **Error Handling**: Comprehensive error handling
+### Input Validation
+- **Laravel Validation**: Uses Laravel's robust validation system
+- **Custom Rules**: Support for business-specific validation
+- **Error Handling**: Comprehensive validation error management
 
-### 3. **Access Control**
-- **User Context**: User-specific cache keys
-- **Permission Checks**: Role-based access control
-- **Audit Trail**: Track all operations
-
-## 📊 Monitoring Architecture
-
-### 1. **Query Logging**
-- **Performance Metrics**: Execution time tracking
-- **Slow Query Detection**: Identify performance bottlenecks
-- **Memory Usage**: Monitor memory consumption
-
-### 2. **Event Tracking**
-- **Operation Events**: Track all CRUD operations
-- **Custom Events**: Support for custom events
-- **Event Logging**: Log all events for debugging
-
-### 3. **Error Handling**
-- **Exception Handling**: Comprehensive exception handling
-- **Error Logging**: Log all errors for debugging
-- **Graceful Degradation**: Handle errors gracefully
+### Access Control
+- **User Context**: User-specific operations and caching
+- **Permission Integration**: Role-based access control support
+- **Audit Trail**: Track all operations for security monitoring
 
 ## 🔗 Integration Points
 
-### 1. **Laravel Integration**
-- **Service Provider**: Auto-discovery
-- **Configuration**: Laravel config system
+### Laravel Integration
+- **Service Provider**: Auto-discovery and registration
+- **Configuration**: Laravel config system integration
 - **Validation**: Laravel validation system
 - **Caching**: Laravel cache system
+- **Events**: Laravel event system compatibility
 
-### 2. **Database Integration**
-- **Eloquent ORM**: Uses Laravel's Eloquent ORM
-- **Query Builder**: Uses Laravel's query builder
-- **Migrations**: Supports Laravel migrations
-- **Relationships**: Supports Eloquent relationships
+### Database Integration
+- **Eloquent ORM**: Full Eloquent model support
+- **Query Builder**: Laravel query builder integration
+- **Relationships**: Support for all Eloquent relationship types
+- **Migrations**: Compatible with Laravel migrations
 
-### 3. **Third-party Integration**
-- **Export Formats**: CSV, JSON, custom formats
-- **Search Engines**: Elasticsearch, custom search
-- **Caching**: Redis, Memcached, file cache
-- **Logging**: Laravel logging system
+## 📊 Monitoring & Debugging
+
+### Query Logging
+- **Performance Metrics**: Execution time tracking
+- **Memory Usage**: Monitor memory consumption
+- **Slow Query Detection**: Identify performance issues
+
+### Event Tracking
+- **Operation Events**: Track all CRUD operations
+- **Custom Events**: Support for business-specific events
+- **Event Logging**: Debug event flow
+
+### Error Handling
+- **Exception Management**: Comprehensive exception handling
+- **Error Logging**: Detailed error logging for debugging
+- **Graceful Degradation**: Handle errors without breaking functionality
 
 ## 🎯 Best Practices
 
-### 1. **Service Design**
-- **Single Responsibility**: Each service has one responsibility
-- **Open/Closed**: Open for extension, closed for modification
-- **Dependency Inversion**: Depend on abstractions, not concretions
+### Service Design
+- **Single Responsibility**: Each service handles one concern
+- **Dependency Injection**: Use constructor injection for dependencies
+- **Interface Segregation**: Keep interfaces focused and minimal
 
-### 2. **Strategy Design**
-- **Interchangeable**: Strategies can be swapped at runtime
-- **Testable**: Each strategy can be tested independently
-- **Configurable**: Strategies can be configured per service
+### Strategy Design
+- **Interchangeable**: Strategies should be swappable at runtime
+- **Testable**: Each strategy should be independently testable
+- **Configurable**: Strategies should accept configuration options
 
-### 3. **Event Design**
-- **Loose Coupling**: Events decouple components
+### Event Design
+- **Loose Coupling**: Events should decouple components
 - **Extensible**: Easy to add new event listeners
-- **Testable**: Events can be tested independently
+- **Predictable**: Event flow should be consistent and predictable
 
-### 4. **Caching Design**
-- **Granular**: Cache at the right level
-- **Invalidation**: Proper cache invalidation
-- **Performance**: Cache for performance, not convenience
-
-## 📈 Scalability Considerations
-
-### 1. **Horizontal Scaling**
-- **Stateless Services**: Services are stateless
-- **Cache Distribution**: Cache can be distributed
-- **Database Sharding**: Supports database sharding
-
-### 2. **Vertical Scaling**
-- **Memory Optimization**: Efficient memory usage
-- **CPU Optimization**: Efficient CPU usage
-- **I/O Optimization**: Efficient I/O operations
-
-### 3. **Performance Monitoring**
-- **Metrics Collection**: Collect performance metrics
-- **Alerting**: Alert on performance issues
-- **Optimization**: Continuous performance optimization
+### Performance Design
+- **Caching Strategy**: Cache at appropriate levels
+- **Query Optimization**: Use eager loading and proper indexing
+- **Memory Management**: Handle large datasets efficiently
 
 ---
 
-This architecture provides a solid foundation for building scalable, maintainable, and performant CRUD operations in Laravel applications.
+## 📚 Key Takeaways
+
+The CRUDer package provides a robust, extensible foundation for Laravel applications that need comprehensive CRUD functionality. By following SOLID principles and implementing proven design patterns, it offers:
+
+- **Maintainable Code**: Clean separation of concerns
+- **Extensible Architecture**: Easy to add new features
+- **Performance Optimized**: Built-in caching and optimization
+- **Security Focused**: Column validation and input sanitization
+- **Developer Friendly**: Clear APIs and comprehensive documentation
+
+The architecture is designed to grow with your application while maintaining performance and code quality.
