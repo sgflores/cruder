@@ -40,12 +40,12 @@ class SearchServiceTest extends UnitTestCase
         $strategy = Mockery::mock(LikeSearchStrategy::class);
         $strategy->shouldReceive('search')
             ->once()
-            ->with($this->mockQuery, Mockery::type('array'), 'test search', Mockery::type('array'));
+            ->with($this->mockQuery, Mockery::type('array'), Mockery::type('array'));
         
         $this->service->addStrategy('like', $strategy);
         
         $config = ['type' => 'like'];
-        $this->service->search($this->mockQuery, [], 'test search', $config);
+        $this->service->search($this->mockQuery, [], $config);
         
         // Verify the strategy was called
         $this->assertTrue($this->service->hasStrategy('like'));
@@ -57,7 +57,7 @@ class SearchServiceTest extends UnitTestCase
         $this->expectExceptionMessage("Search strategy 'nonexistent' not found");
         
         $config = ['type' => 'nonexistent'];
-        $this->service->search($this->mockQuery, [], 'test search', $config);
+        $this->service->search($this->mockQuery, [], $config);
     }
 
     public function test_get_available_strategies(): void
@@ -86,13 +86,13 @@ class SearchServiceTest extends UnitTestCase
         $strategy = Mockery::mock(LikeSearchStrategy::class);
         $strategy->shouldReceive('search')
             ->once()
-            ->with($this->mockQuery, Mockery::type('array'), 'test search', Mockery::type('array'))
+            ->with($this->mockQuery, Mockery::type('array'), Mockery::type('array'))
             ->andReturn($this->mockQuery);
         
         $this->service->addStrategy('like', $strategy);
         
         $config = []; // No type specified, should default to 'like'
-        $result = $this->service->search($this->mockQuery, [], 'test search', $config);
+        $result = $this->service->search($this->mockQuery, [], $config);
         
         $this->assertSame($this->mockQuery, $result);
     }
@@ -108,21 +108,21 @@ class SearchServiceTest extends UnitTestCase
         // Test custom strategy
         $customStrategy->shouldReceive('search')
             ->once()
-            ->with($this->mockQuery, Mockery::type('array'), 'test search', ['type' => 'custom'])
+            ->with($this->mockQuery, Mockery::type('array'), ['type' => 'custom'])
             ->andReturn($this->mockQuery);
         
         $config = ['type' => 'custom'];
-        $result1 = $this->service->search($this->mockQuery, [], 'test search', $config);
+        $result1 = $this->service->search($this->mockQuery, [], $config);
         $this->assertSame($this->mockQuery, $result1);
         
         // Test like strategy
         $likeStrategy->shouldReceive('search')
             ->once()
-            ->with($this->mockQuery, Mockery::type('array'), 'test search', ['type' => 'like'])
+            ->with($this->mockQuery, Mockery::type('array'), ['type' => 'like'])
             ->andReturn($this->mockQuery);
         
         $config = ['type' => 'like'];
-        $result2 = $this->service->search($this->mockQuery, [], 'test search', $config);
+        $result2 = $this->service->search($this->mockQuery, [], $config);
         $this->assertSame($this->mockQuery, $result2);
     }
 
@@ -131,7 +131,8 @@ class SearchServiceTest extends UnitTestCase
         $strategy = Mockery::mock(LikeSearchStrategy::class);
         $strategy->shouldReceive('search')
             ->once()
-            ->with($this->mockQuery, Mockery::type('array'), 'test search', [
+            ->with($this->mockQuery, Mockery::type('array'), [
+                'term' => 'test search',
                 'type' => 'like',
                 'enabled' => true,
                 'direct_columns' => ['name', 'email'],
@@ -142,13 +143,14 @@ class SearchServiceTest extends UnitTestCase
         $this->service->addStrategy('like', $strategy);
         
         $config = [
+            'term' => 'test search',
             'type' => 'like',
             'enabled' => true,
             'direct_columns' => ['name', 'email'],
             'related_columns' => ['department_name']
         ];
         
-        $result = $this->service->search($this->mockQuery, [], 'test search', $config);
+        $result = $this->service->search($this->mockQuery, [], $config);
         $this->assertSame($this->mockQuery, $result);
     }
 
@@ -157,13 +159,13 @@ class SearchServiceTest extends UnitTestCase
         $strategy = Mockery::mock(LikeSearchStrategy::class);
         $strategy->shouldReceive('search')
             ->once()
-            ->with($this->mockQuery, Mockery::type('array'), '', ['type' => 'like'])
+            ->with($this->mockQuery, Mockery::type('array'), ['type' => 'like'])
             ->andReturn($this->mockQuery);
         
         $this->service->addStrategy('like', $strategy);
         
         $config = ['type' => 'like'];
-        $result = $this->service->search($this->mockQuery, [], '', $config);
+        $result = $this->service->search($this->mockQuery, [], $config);
         $this->assertSame($this->mockQuery, $result);
     }
 
@@ -174,13 +176,13 @@ class SearchServiceTest extends UnitTestCase
         
         $strategy->shouldReceive('search')
             ->once()
-            ->with($this->mockQuery, Mockery::type('array'), $searchTerm, ['type' => 'like'])
+            ->with($this->mockQuery, Mockery::type('array'), ['type' => 'like'])
             ->andReturn($this->mockQuery);
         
         $this->service->addStrategy('like', $strategy);
         
         $config = ['type' => 'like'];
-        $result = $this->service->search($this->mockQuery, [], $searchTerm, $config);
+        $result = $this->service->search($this->mockQuery, [], $config);
         $this->assertSame($this->mockQuery, $result);
     }
 
@@ -194,11 +196,11 @@ class SearchServiceTest extends UnitTestCase
         
         $secondStrategy->shouldReceive('search')
             ->once()
-            ->with($this->mockQuery, Mockery::type('array'), 'test search', ['type' => 'like'])
+            ->with($this->mockQuery, Mockery::type('array'), ['type' => 'like'])
             ->andReturn($this->mockQuery);
         
         $config = ['type' => 'like'];
-        $result = $this->service->search($this->mockQuery, [], 'test search', $config);
+        $result = $this->service->search($this->mockQuery, [], $config);
         $this->assertSame($this->mockQuery, $result);
     }
 }

@@ -17,9 +17,8 @@ interface SearchStrategyInterface
      * 
      * @param Builder $query The Eloquent query builder instance
      * @param array $filters Array of query options
-     * @param string|null $searchTerm Optional search term
      * @param array $config Optional search configuration
      * @return Builder The modified query builder
      */
-    public function search(Builder $query, array $filters, ?string $searchTerm = null, array $config = []): Builder;
+    public function search(Builder $query, array $filters, array $config = []): Builder;
 }

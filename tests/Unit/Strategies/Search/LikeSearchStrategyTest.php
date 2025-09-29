@@ -5,9 +5,9 @@ namespace SgFlores\Cruder\Tests\Unit\Strategies\Search;
 use Illuminate\Database\Eloquent\Builder;
 use Mockery;
 use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
-use SgFlores\Cruder\Tests\TestCase;
+use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
-class LikeSearchStrategyTest extends TestCase
+class LikeSearchStrategyTest extends OrchestraTestCase
 {
     protected LikeSearchStrategy $strategy;
     protected $mockQuery;
@@ -31,7 +31,8 @@ class LikeSearchStrategyTest extends TestCase
     {
         $config = [
             'direct_columns' => ['name', 'email'],
-            'related_columns' => []
+            'related_columns' => [],
+            'term' => 'test search'
         ];
 
         $filters = ['search' => 'test search'];
@@ -51,16 +52,17 @@ class LikeSearchStrategyTest extends TestCase
             ->with('email', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+        $result = $this->strategy->search($this->mockQuery, $filters, $config);
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
+        $this->assertInstanceOf(Builder::class, $result);
     }
 
     public function test_search_with_related_columns(): void
     {
         $config = [
             'direct_columns' => [],
-            'related_columns' => ['department_name']
+            'related_columns' => ['department_name'],
+            'term' => 'test search'
         ];
 
         $filters = ['search' => 'test search'];
@@ -85,16 +87,17 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+        $result = $this->strategy->search($this->mockQuery, $filters, $config);
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
+        $this->assertInstanceOf(Builder::class, $result);
     }
 
     public function test_search_with_mixed_columns(): void
     {
         $config = [
             'direct_columns' => ['name', 'email'],
-            'related_columns' => ['department_name']
+            'related_columns' => ['department_name'],
+            'term' => 'test search'
         ];
 
         $filters = ['search' => 'test search'];
@@ -128,16 +131,17 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+        $result = $this->strategy->search($this->mockQuery, $filters, $config);
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
+        $this->assertInstanceOf(Builder::class, $result);
     }
 
     public function test_search_with_empty_config(): void
     {
         $config = [
             'direct_columns' => [],
-            'related_columns' => []
+            'related_columns' => [],
+            'term' => 'test search'
         ];
 
         $filters = ['search' => 'test search'];
@@ -150,16 +154,19 @@ class LikeSearchStrategyTest extends TestCase
                 return $this->mockQuery;
             });
 
-        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+        // No additional expectations since there are no columns to search
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
+        $result = $this->strategy->search($this->mockQuery, $filters, $config);
+
+        $this->assertInstanceOf(Builder::class, $result);
     }
 
     public function test_search_with_underscore_notation(): void
     {
         $config = [
             'direct_columns' => [],
-            'related_columns' => ['department_name']
+            'related_columns' => ['department_name'],
+            'term' => 'test search'
         ];
 
         $filters = ['search' => 'test search'];
@@ -184,16 +191,17 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+        $result = $this->strategy->search($this->mockQuery, $filters, $config);
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
+        $this->assertInstanceOf(Builder::class, $result);
     }
 
     public function test_search_with_dot_notation(): void
     {
         $config = [
             'direct_columns' => [],
-            'related_columns' => ['department.name']
+            'related_columns' => ['department.name'],
+            'term' => 'test search'
         ];
 
         $filters = ['search' => 'test search'];
@@ -218,16 +226,17 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+        $result = $this->strategy->search($this->mockQuery, $filters, $config);
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
+        $this->assertInstanceOf(Builder::class, $result);
     }
 
     public function test_search_with_special_characters(): void
     {
         $config = [
             'direct_columns' => ['name'],
-            'related_columns' => []
+            'related_columns' => [],
+            'term' => 'test%_search'
         ];
 
         $searchTerm = 'test%_search';
@@ -245,8 +254,8 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%' . $searchTerm . '%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+        $result = $this->strategy->search($this->mockQuery, $filters, $config);
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
+        $this->assertInstanceOf(Builder::class, $result);
     }
 }
