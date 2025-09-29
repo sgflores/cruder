@@ -51,37 +51,6 @@ return [
     |
     */
     'performance' => [
-        'monitor_slow_queries' => env('CRUDER_MONITOR_SLOW_QUERIES', true),
-        'slow_query_threshold' => env('CRUDER_SLOW_QUERY_THRESHOLD', 1000),
-        'log_slow_queries' => env('CRUDER_LOG_SLOW_QUERIES', true),
         'slow_query_log_level' => env('CRUDER_SLOW_QUERY_LOG_LEVEL', 'warning'),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cache Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Default cache settings for CRUD operations.
-    |
-    */
-    'cache' => [
-        'default_enabled' => env('CRUDER_CACHE_ENABLED', false),
-        'default_lifetime' => env('CRUDER_CACHE_LIFETIME', 3600), // seconds
-        'use_tags' => env('CRUDER_CACHE_USE_TAGS', true),
-        'fallback_to_flush' => env('CRUDER_CACHE_FALLBACK_TO_FLUSH', true),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Validation Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Default validation settings for CRUD operations.
-    |
-    */
-    'validation' => [
-        'strict_column_validation' => env('CRUDER_STRICT_COLUMN_VALIDATION', true),
-        'throw_on_invalid_columns' => env('CRUDER_THROW_ON_INVALID_COLUMNS', true),
     ],
 ];

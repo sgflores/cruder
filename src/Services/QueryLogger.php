@@ -14,6 +14,9 @@ class QueryLogger
     /**
      * Log a query for a specific operation.
      * 
+     * Logs database queries based on configuration settings.
+     * Can filter by operation type, execution time, and other criteria.
+     * 
      * @param string $operation The operation type (find, create, update, delete, etc.)
      * @param Builder $query The query builder instance
      * @param float $executionTime The execution time in milliseconds
@@ -22,28 +25,28 @@ class QueryLogger
      */
     public function logQuery(string $operation, Builder $query, float $executionTime = 0, array $context = []): void
     {
-        // Check if query logging is enabled
+        // Skip if query logging is disabled globally
         if (!$this->isQueryLoggingEnabled()) {
             return;
         }
 
-        // Check if this operation should be logged
+        // Skip if this specific operation shouldn't be logged
         if (!$this->shouldLogOperation($operation)) {
             return;
         }
 
-        // Check if we should only log slow queries
+        // Skip if only slow queries should be logged and this isn't slow
         if ($this->shouldOnlyLogSlowQueries() && !$this->isSlowQuery($executionTime)) {
             return;
         }
 
-        // Prepare log data
+        // Build the log data structure
         $logData = $this->prepareLogData($operation, $query, $executionTime, $context);
 
-        // Determine log level
+        // Determine appropriate log level (debug, warning, etc.)
         $logLevel = $this->getLogLevel($executionTime);
 
-        // Log the query
+        // Write the log entry
         $this->writeLog($logLevel, $logData);
     }
 

@@ -55,7 +55,11 @@
         }
     },
     "scripts": {
-        "test": "phpunit",
-        "test-coverage": "phpunit --coverage-html coverage"
+        "test": "phpunit --no-coverage",
+        "test-coverage": "phpunit --configuration=phpunit-with-coverage.xml",
+        "test-unit": "phpunit --testsuite=Unit --no-coverage",
+        "test-integration": "phpunit --testsuite=Integration --no-coverage",
+        "test-feature": "phpunit --testsuite=Feature --no-coverage",
+        "test-all": "phpunit --testsuite=Unit --testsuite=Integration --testsuite=Feature --no-coverage"
     }
 }

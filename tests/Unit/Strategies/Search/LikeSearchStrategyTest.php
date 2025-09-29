@@ -34,6 +34,8 @@ class LikeSearchStrategyTest extends TestCase
             'related_columns' => []
         ];
 
+        $filters = ['search' => 'test search'];
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
@@ -49,10 +51,8 @@ class LikeSearchStrategyTest extends TestCase
             ->with('email', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, 'test search', $config);
-        
-        // Verify the mock was called as expected
-        $this->assertTrue(true); // Mock verification happens in tearDown
+        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
     }
 
@@ -62,6 +62,8 @@ class LikeSearchStrategyTest extends TestCase
             'direct_columns' => [],
             'related_columns' => ['department_name']
         ];
+
+        $filters = ['search' => 'test search'];
 
         $this->mockQuery->shouldReceive('where')
             ->once()
@@ -83,10 +85,8 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, 'test search', $config);
-        
-        // Verify the mock was called as expected
-        $this->assertTrue(true); // Mock verification happens in tearDown
+        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
     }
 
@@ -96,6 +96,8 @@ class LikeSearchStrategyTest extends TestCase
             'direct_columns' => ['name', 'email'],
             'related_columns' => ['department_name']
         ];
+
+        $filters = ['search' => 'test search'];
 
         $this->mockQuery->shouldReceive('where')
             ->once()
@@ -126,10 +128,8 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, 'test search', $config);
-        
-        // Verify the mock was called as expected
-        $this->assertTrue(true); // Mock verification happens in tearDown
+        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
     }
 
@@ -140,6 +140,8 @@ class LikeSearchStrategyTest extends TestCase
             'related_columns' => []
         ];
 
+        $filters = ['search' => 'test search'];
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
@@ -148,10 +150,8 @@ class LikeSearchStrategyTest extends TestCase
                 return $this->mockQuery;
             });
 
-        $result = $this->strategy->search($this->mockQuery, 'test search', $config);
-        
-        // Verify the mock was called as expected
-        $this->assertTrue(true); // Mock verification happens in tearDown
+        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
     }
 
@@ -162,6 +162,8 @@ class LikeSearchStrategyTest extends TestCase
             'related_columns' => ['department_name']
         ];
 
+        $filters = ['search' => 'test search'];
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
@@ -182,10 +184,8 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, 'test search', $config);
-        
-        // Verify the mock was called as expected
-        $this->assertTrue(true); // Mock verification happens in tearDown
+        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
     }
 
@@ -196,6 +196,8 @@ class LikeSearchStrategyTest extends TestCase
             'related_columns' => ['department.name']
         ];
 
+        $filters = ['search' => 'test search'];
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
@@ -216,10 +218,8 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%test search%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, 'test search', $config);
-        
-        // Verify the mock was called as expected
-        $this->assertTrue(true); // Mock verification happens in tearDown
+        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
     }
 
@@ -231,6 +231,7 @@ class LikeSearchStrategyTest extends TestCase
         ];
 
         $searchTerm = 'test%_search';
+        $filters = ['search' => $searchTerm];
 
         $this->mockQuery->shouldReceive('where')
             ->once()
@@ -244,8 +245,8 @@ class LikeSearchStrategyTest extends TestCase
             ->with('name', 'like', '%' . $searchTerm . '%')
             ->once();
 
-        $result = $this->strategy->search($this->mockQuery, $searchTerm, $config);
-        
+        $result = $this->strategy->search($this->mockQuery, $filters, null, $config);
+
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Builder::class, $result);
     }
 }

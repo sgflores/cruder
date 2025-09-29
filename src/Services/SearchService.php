@@ -36,21 +36,28 @@ class SearchService
     /**
      * Applies search using the specified strategy.
      * 
+     * Uses the configured search strategy to modify the query builder
+     * with appropriate search conditions (LIKE, full-text, etc.).
+     * 
      * @param Builder $query The Eloquent query builder instance
-     * @param string $term The search term
+     * @param array $filters Array of query options
+     * @param string|null $searchTerm Optional search term
      * @param array $config Search configuration
      * @return Builder The modified query builder
      */
-    public function search(Builder $query, string $term, array $config): Builder
+    public function search(Builder $query, array $filters, ?string $searchTerm = null, array $config = []): Builder
     {
+        // Get strategy name from config, default to 'like'
         $strategyName = $config['type'] ?? 'like';
         $strategy = $this->strategies[$strategyName] ?? null;
         
+        // Throw exception if strategy not found
         if (!$strategy) {
             throw new \InvalidArgumentException("Search strategy '{$strategyName}' not found");
         }
         
-        return $strategy->search($query, $term, $config);
+        // Delegate to the strategy to modify the query
+        return $strategy->search($query, $filters, $searchTerm, $config);
     }
 
     /**

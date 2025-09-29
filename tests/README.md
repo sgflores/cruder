@@ -14,16 +14,13 @@ tests/
 │   ├── Services/              # Service layer tests
 │   │   ├── SearchServiceTest.php
 │   │   ├── ExportServiceTest.php
-│   │   └── HookServiceTest.php
+│   │   └── EventServiceTest.php
 │   └── Strategies/            # Strategy pattern tests
 │       ├── Search/
-│       │   ├── FullTextSearchStrategyTest.php
 │       │   └── LikeSearchStrategyTest.php
 │       ├── Export/
 │       │   ├── CsvExportStrategyTest.php
 │       │   └── JsonExportStrategyTest.php
-│       └── Hooks/
-│           └── CallableHookTest.php
 ├── Models/                     # Test models
 │   ├── User.php
 │   └── Department.php
@@ -140,7 +137,6 @@ vendor/bin/phpunit tests/Integration
 vendor/bin/phpunit tests/Feature/BaseCrudServiceTest.php
 
 # Search strategy tests
-vendor/bin/phpunit tests/Unit/Strategies/Search/FullTextSearchStrategyTest.php
 ```
 
 ### Run with Coverage
