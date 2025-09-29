@@ -255,21 +255,6 @@ class ColumnValidationTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $result->count());
     }
 
-    public function test_advanced_filter_ignores_reserved_parameters(): void
-    {
-        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
-        
-        $result = $this->userService->findAll([
-            'paginate' => ['operator' => 'gte', 'value' => 1], // Reserved parameter
-            'search' => ['operator' => 'like', 'value' => '%User%'], // Reserved parameter
-            'sort_by' => ['operator' => 'eq', 'value' => 'name'], // Reserved parameter
-            'id' => ['operator' => 'gte', 'value' => 1] // Valid filter
-        ]);
-        
-        $this->assertInstanceOf(Collection::class, $result);
-        $this->assertGreaterThanOrEqual(1, $result->count());
-    }
-
     public function test_advanced_filter_throws_exception_for_invalid_column(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -36,6 +36,9 @@ class ExportService
     /**
      * Exports data using the specified strategy.
      * 
+     * Uses the registered strategy for the given format to convert
+     * the collection data into the desired export format (CSV, JSON, etc.).
+     * 
      * @param string $format The export format
      * @param Collection $data The data to export
      * @param array $options Export options
@@ -44,12 +47,15 @@ class ExportService
      */
     public function export(string $format, Collection $data, array $options = []): string
     {
+        // Get the strategy for the requested format
         $strategy = $this->strategies[$format] ?? null;
         
+        // Throw exception if format is not supported
         if (!$strategy) {
             throw new \InvalidArgumentException("Export format '{$format}' not supported. Available formats: " . implode(', ', $this->getAvailableFormats()));
         }
         
+        // Delegate to the strategy to handle the actual export
         return $strategy->export($data, $options);
     }
 

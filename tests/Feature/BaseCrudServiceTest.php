@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
+use SgFlores\Cruder\Exceptions\ValidationException;
 use SgFlores\Cruder\Tests\Models\Department;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
@@ -154,7 +154,12 @@ class BaseCrudServiceTest extends TestCase
             'department_id' => 999 // Invalid: doesn't exist
         ];
         
-        $this->userService->create($data);
+        $validationRules = [
+            'name' => 'required|string|max:255',
+            'department_id' => 'required|exists:test_departments,id'
+        ];
+        
+        $this->userService->create($data, null, $validationRules);
     }
 
     public function test_update_returns_model(): void
@@ -413,7 +418,7 @@ class BaseCrudServiceTest extends TestCase
     {
         $hookExecuted = false;
         
-        $this->userService->addHook('after_create', function ($user) use (&$hookExecuted) {
+        $this->userService->getEventService()->listen('after_create', function ($user) use (&$hookExecuted) {
             $hookExecuted = true;
             return $user;
         });

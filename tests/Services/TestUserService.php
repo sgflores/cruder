@@ -3,8 +3,9 @@
 namespace SgFlores\Cruder\Tests\Services;
 
 use SgFlores\Cruder\BaseCrudService;
+use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
+use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
 use SgFlores\Cruder\Tests\Models\User;
-use SgFlores\Cruder\Strategies\Hooks\CallableHook;
 
 class TestUserService extends BaseCrudService
 {
@@ -16,7 +17,22 @@ class TestUserService extends BaseCrudService
     public function __construct()
     {
         parent::__construct(new User());
+
+        // Add test event listeners
+        $this->getEventService()->listen('after_create', function ($user) {
+            // Simulate sending welcome email
+            return $user;
+        });
+        
+        $this->getEventService()->listen('before_update', function ($data) {
+            return $data;
+        });
+
+        // add exports
+        $this->getExportService()->addStrategy('csv', new CsvExportStrategy());
+        $this->getExportService()->addStrategy('json', new JsonExportStrategy());
     }
+    
     // Direct column constants
     protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name'];
     protected const DIRECT_FILTERABLE_COLUMNS = ['id', 'name', 'department_id', 'created_at', 'updated_at', 'deleted_at'];
@@ -32,8 +48,6 @@ class TestUserService extends BaseCrudService
     protected const SINGLE_RECORD_RELATIONS = ['department', 'createdBy', 'updatedBy'];
     
     // Search configuration
-    protected const ENABLE_FULLTEXT_SEARCH = false;
-    protected const FULLTEXT_SEARCH_COLUMNS = ['name'];
 
     protected const PAGINATE_PARAM = 'paginate';
     protected const LIMIT_PARAM = 'limit';
@@ -43,17 +57,7 @@ class TestUserService extends BaseCrudService
     protected const CREATOR_COLUMN = 'created_by';
     protected const UPDATER_COLUMN = 'updated_by';
     protected const DELETER_COLUMN = 'deleted_by';
-    
-    // Validation rules
-    protected const CREATE_VALIDATION_RULES = [
-        'name' => 'required|string|max:255',
-        'department_id' => 'required|exists:test_departments,id'
-    ];
-    
-    protected const UPDATE_VALIDATION_RULES = [
-        'name' => 'sometimes|string|max:255',
-        'department_id' => 'sometimes|exists:test_departments,id'
-    ];
+
     
     // Cache configuration
     protected const QUERY_CACHE_ENABLED = true;
@@ -83,29 +87,4 @@ class TestUserService extends BaseCrudService
     
     // Database connection
     protected const DATABASE_CONNECTION = null;
-    
-    // Query hooks
-    protected const QUERY_HOOKS = [
-        'before_find' => [],
-        'after_find' => [],
-        'before_create' => [],
-        'after_create' => [],
-        'before_update' => [],
-        'after_update' => [],
-        'before_delete' => [],
-        'after_delete' => []
-    ];
-
-    protected function configureServices(): void
-    {
-        // Add test hooks
-        $this->addHook('after_create', function ($user) {
-            // Simulate sending welcome email
-            return $user;
-        });
-        
-        $this->addHook('before_update', function ($data) {
-            return $data;
-        });
-    }
 }
