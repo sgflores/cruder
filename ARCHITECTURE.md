@@ -64,6 +64,21 @@ The CRUDer package is a comprehensive Laravel package that provides a robust, ex
 
 ## 📦 Core Components
 
+### Configuration Architecture
+
+#### Interfaces
+- **ReaderConfigurable**: Defines the contract for reader services
+- **CrudConfigurable**: Defines the contract for CRUD-specific configuration (auditing, etc.)
+
+#### Traits
+- **ReaderConfigurationTrait**: Provides default implementations for reader service methods
+- **CrudConfigurationTrait**: Provides default implementations for CRUD-specific methods (auditing, etc.)
+- **PerformanceMonitoringTrait**: Provides performance monitoring, timing, and debugging functionality
+
+#### Base Classes
+- **BaseReaderService**: Implements ReaderConfigurable using ReaderConfigurationTrait
+- **BaseCrudService**: Extends BaseReaderService and implements CrudConfigurable using CrudConfigurationTrait
+
 ### Base Services
 
 #### BaseReaderService
@@ -78,10 +93,13 @@ The CRUDer package is a comprehensive Laravel package that provides a robust, ex
 
 **Column Security**:
 ```php
-protected const DIRECT_FILTERABLE_COLUMNS = ['status', 'department_id'];
-protected const DIRECT_SORTABLE_COLUMNS = ['name', 'created_at'];
-protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name', 'email'];
+public function getDirectFilterableColumns(): array
+{
+    return ['status', 'department_id'];
+}
 ```
+
+> **📖 Configuration Reference**: See [CONFIGURATION.md](CONFIGURATION.md) for all column configuration methods and examples.
 
 #### BaseCrudService
 **Purpose**: Extends BaseReaderService to provide full CRUD operations.
@@ -213,19 +231,10 @@ protected function configureServices(): void
 }
 ```
 
-### Column Security Configuration
-Column constants define which columns are allowed for operations:
+### Trait-Based Configuration System
+The package uses a trait-based configuration system that provides type safety, IDE support, and flexibility.
 
-```php
-// Define filterable columns
-protected const DIRECT_FILTERABLE_COLUMNS = ['status', 'department_id'];
-
-// Define sortable columns  
-protected const DIRECT_SORTABLE_COLUMNS = ['name', 'created_at'];
-
-// Define searchable columns
-protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name', 'email'];
-```
+> **📖 Configuration Reference**: See [CONFIGURATION.md](CONFIGURATION.md) for complete configuration methods, examples, and best practices.
 
 ## 🚀 Performance Features
 

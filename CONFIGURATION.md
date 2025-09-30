@@ -1,219 +1,416 @@
-# CRUDer Configuration Guide
+# Configuration Methods Documentation
 
-This document provides a comprehensive guide to all available configuration options, constants, and settings for the CRUDer package.
+## Overview
 
-## 📋 Table of Contents
+The Cruder package uses a trait-based configuration system which provides better type safety, IDE support, and flexibility while maintaining sensible defaults.
 
-- [BaseReaderService Constants](#basereaderservice-constants)
-- [BaseCrudService Constants](#basecrudservice-constants)
-- [Configuration File Options](#configuration-file-options)
-- [Usage Examples](#usage-examples)
+## Key Benefits
 
----
+1. **Type Safety**: Return type hints ensure consistent data types
+2. **IDE Support**: Better autocompletion and IntelliSense
+3. **Flexibility**: Methods can return computed values
+4. **Override Capability**: Child classes can easily override any configuration
+5. **Clear Contracts**: Interfaces make the contract explicit
+6. **Consistent Naming**: Clear, descriptive names that follow established conventions
 
-## BaseReaderService Constants
+## Architecture
 
-### 🔍 Search & Filter Constants
+### Interfaces
 
-| Constant | Type | Default | Purpose | Description | URL Example |
-|----------|------|---------|---------|-------------|-------------|
-| `SEARCH_PARAM` | string | `'search'` | Search parameter name | The query parameter name used for text search | `?search=john` |
-| `SORT_BY_PARAM` | string | `'sort_by'` | Sort parameter name | The query parameter name for specifying sort column | `?sort_by=name` |
-| `SORT_DIRECTION_PARAM` | string | `'sort_direction'` | Sort direction parameter | The query parameter name for sort direction (asc/desc) | `?sort_direction=desc` |
-| `PAGINATE_PARAM` | string | `'page'` | Pagination parameter | The query parameter name for pagination | `?page=2` |
-| `LIMIT_PARAM` | string | `'limit'` | Limit parameter | The query parameter name for result limit | `?limit=50` |
+- `ReaderConfigurable`: Defines the contract for reader services
+- `CrudConfigurable`: Defines the contract for CRUD-specific configuration (auditing, etc.)
 
-#### 📝 URL Parameter Examples
+### Traits
 
-Here are some practical examples of how these parameters work together:
+- `ReaderConfigurationTrait`: Provides default implementations for reader service methods
+- `CrudConfigurationTrait`: Provides default implementations for CRUD-specific methods (auditing, etc.)
+- `PerformanceMonitoringTrait`: Provides performance monitoring, timing, and debugging functionality
 
-**Basic Search:**
+**Note**: `CrudConfigurationTrait` only provides CRUD-specific methods. Classes using this trait should extend `BaseReaderService` or use `ReaderConfigurationTrait` to get all reader methods.
+
+### Base Classes
+
+- `BaseReaderService`: Implements ReaderConfigurable using ReaderConfigurationTrait
+- `BaseCrudService`: Extends BaseReaderService and implements CrudConfigurable using CrudConfigurationTrait
+
+## Naming Convention
+
+### Interface Naming
+- **Pattern**: `{Purpose}Configurable`
+- **Examples**: `ReaderConfigurable`, `CrudConfigurable`
+- **Rationale**: Uses the "able" suffix to indicate capabilities, following PHP conventions like `Serializable`, `Countable`
+
+### Trait Naming
+- **Pattern**: `{Purpose}Trait` or `{Purpose}ConfigurationTrait`
+- **Examples**: `ReaderConfigurationTrait`, `CrudConfigurationTrait`, `PerformanceMonitoringTrait`
+- **Rationale**: Clearly indicates the trait's purpose and functionality
+
+### Benefits of This Naming Convention
+1. **Self-Documenting**: Names clearly indicate what each component does
+2. **Consistent**: Follows established PHP naming patterns
+3. **Discoverable**: Easy to find related components in IDEs
+4. **Scalable**: Easy to add new configuration types (e.g., `ApiConfigurable`)
+
+## Configuration Methods
+
+### Query Parameters
+
+```php
+public function getSearchParam(): string          // Default: 'search'
+// Returns the URL parameter name for text search queries
+
+public function getSortByParam(): string          // Default: 'sort_by'
+// Returns the URL parameter name for specifying sort column
+
+public function getSortDirectionParam(): string   // Default: 'sort_direction'
+// Returns the URL parameter name for sort direction (asc/desc)
+
+public function getPaginateParam(): string        // Default: 'page'
+// Returns the URL parameter name for pagination
+
+public function getLimitParam(): string           // Default: 'limit'
+// Returns the URL parameter name for limiting results per page
 ```
-GET /api/users?search=john
+
+### Relations
+
+```php
+public function getCollectionRelations(): array   // Default: []
+// Returns relations to eager load for collection queries (findAll, search)
+
+public function getSingleRecordRelations(): array // Default: []
+// Returns relations to eager load for single record queries (findById, create, update)
 ```
 
-**Search with Sorting:**
+### Column Configuration
+
+```php
+// Direct columns (from the main model table)
+public function getDirectFilterableColumns(): array     // Default: []
+// Returns columns that can be used for filtering (WHERE clauses)
+
+public function getDirectTextSearchColumns(): array     // Default: []
+// Returns columns that can be searched using text search
+
+public function getDirectSortableColumns(): array       // Default: []
+// Returns columns that can be used for sorting (ORDER BY)
+
+// Related columns (from related model tables)
+public function getRelatedFilterableColumns(): array    // Default: []
+// Returns related model columns that can be used for filtering
+
+public function getRelatedTextSearchColumns(): array    // Default: []
+// Returns related model columns that can be searched using text search
+
+public function getRelatedSortableColumns(): array      // Default: []
+// Returns related model columns that can be used for sorting
 ```
-GET /api/users?search=john&sort_by=name&sort_direction=asc
+
+### Default Behavior
+
+```php
+public function getDefaultSortColumn(): string     // Default: 'id'
+// Returns the default column to sort by when no sort column is specified
+
+public function getDefaultSortDirection(): string  // Default: 'asc'
+// Returns the default sort direction (asc/desc) when no direction is specified
 ```
 
-**Search with Pagination:**
-```
-GET /api/users?search=john&page=2&limit=20
-```
+### Caching
 
-**Complete Query Example:**
-```
-GET /api/users?search=john&status=active&sort_by=created_at&sort_direction=desc&page=1&limit=10
-```
+```php
+public function isQueryCacheEnabled(): bool        // Default: false
+// Determines if query results should be cached for performance
 
-**Filtering by Column Values:**
-```
-GET /api/users?status=active&department_id=5
+public function getCacheLifetimeSeconds(): int     // Default: 3600
+// Returns the number of seconds to cache query results
+
+public function getCacheTags(): array              // Default: []
+// Returns cache tags for precise cache invalidation
 ```
 
-**Related Model Filtering:**
+### Advanced Features
+
+```php
+public function getSelectColumns(): array          // Default: []
+// Returns specific columns to select (overrides default SELECT *)
+
+public function getExcludeColumns(): array         // Default: []
+// Returns columns to exclude from SELECT queries
+
+public function shouldIncludeSoftDeleted(): bool   // Default: false
+// Determines if soft-deleted records should be included in results
+
+public function shouldOnlyShowSoftDeleted(): bool  // Default: false
+// Determines if only soft-deleted records should be returned
+
+public function shouldEnableApiResources(): bool   // Default: false
+// Determines if API resources should be used to transform responses
+
+public function getApiResourceClass(): ?string     // Default: null
+// Returns the API resource class to use for response transformation
+
+public function shouldEnableChunkedProcessing(): bool // Default: false
+// Determines if large datasets should be processed in chunks
+
+public function getChunkSize(): int                // Default: 1000
+// Returns the number of records to process per chunk
+
+public function getDatabaseConnection(): ?string   // Default: null
+// Returns the database connection name to use (null = default)
 ```
-GET /api/products?category_name=Electronics&brand_name=Samsung
+
+### CRUD-Specific Methods
+
+```php
+public function isAuditTrailEnabled(): bool        // Default: false
+// Determines if audit trail fields should be automatically populated
+
+public function getCreatorColumn(): string         // Default: 'created_by'
+// Returns the column name for tracking who created the record
+
+public function getUpdaterColumn(): string         // Default: 'updated_by'
+// Returns the column name for tracking who last updated the record
+
+public function getDeleterColumn(): string         // Default: 'deleted_by'
+// Returns the column name for tracking who soft-deleted the record
 ```
-
-### 🔗 Relationship Constants
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `COLLECTION_RELATIONS` | array | `[]` | Collection relations | Relations to eager load for collection queries (findAll) |
-| `SINGLE_RECORD_RELATIONS` | array | `[]` | Single record relations | Relations to eager load for single record queries (findById) |
-| `MAGIC_COUNT` | string | `'_is_count_'` | Count magic key | Special key used for count operations |
-
-### 🏷️ Column Configuration Constants
-
-#### Direct Model Columns
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `DIRECT_FILTERABLE_COLUMNS` | array | `[]` | Filterable columns | Columns that can be used for exact filtering |
-| `DIRECT_TEXT_SEARCH_COLUMNS` | array | `[]` | Searchable columns | Columns that can be searched using text search |
-| `DIRECT_SORTABLE_COLUMNS` | array | `[]` | Sortable columns | Columns that can be used for sorting |
-
-#### Related Model Columns
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `RELATED_FILTERABLE_COLUMNS` | array | `[]` | Related filterable columns | Related model columns for filtering (e.g., 'user_name') |
-| `RELATED_TEXT_SEARCH_COLUMNS` | array | `[]` | Related searchable columns | Related model columns for text search |
-| `RELATED_SORTABLE_COLUMNS` | array | `[]` | Related sortable columns | Related model columns for sorting |
-
-### 📊 Default Behavior Constants
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `DEFAULT_SORT_COLUMN` | string | `'id'` | Default sort column | Column used for default sorting |
-| `DEFAULT_SORT_DIRECTION` | string | `'asc'` | Default sort direction | Default sort direction (asc/desc) |
-
-### ⚡ Performance Constants
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `QUERY_CACHE_ENABLED` | bool | `false` | Query caching | Enable/disable query result caching |
-| `CACHE_LIFETIME_SECONDS` | int | `3600` | Cache lifetime | Cache expiration time in seconds |
-| `CACHE_TAGS` | array | `[]` | Cache tags | Tags for cache invalidation |
-| `ENABLE_CHUNKED_PROCESSING` | bool | `false` | Chunked processing | Enable chunked processing for large datasets |
-| `CHUNK_SIZE` | int | `1000` | Chunk size | Number of records per chunk |
-
-### 🔧 Data Selection Constants
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `SELECT_COLUMNS` | array | `[]` | Select columns | Specific columns to select (if empty, selects all) |
-| `EXCLUDE_COLUMNS` | array | `[]` | Exclude columns | Columns to exclude from selection |
-| `DATABASE_CONNECTION` | string|null | `null` | Database connection | Specific database connection to use |
-
-### 🗑️ Soft Delete Constants
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `INCLUDE_SOFT_DELETED` | bool | `false` | Include soft deleted | Include soft deleted records in queries |
-| `ONLY_SOFT_DELETED` | bool | `false` | Only soft deleted | Only return soft deleted records |
-
-### 🎯 API Resource Constants
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `ENABLE_API_RESOURCES` | bool | `false` | API resources | Enable Laravel API resource transformation |
-| `API_RESOURCE_CLASS` | string|null | `null` | API resource class | Custom API resource class to use |
-
----
-
-## BaseCrudService Constants
-
-### 📝 Audit Trail Constants
-
-| Constant | Type | Default | Purpose | Description |
-|----------|------|---------|---------|-------------|
-| `AUDIT_TRAIL_ENABLED` | bool | `false` | Audit trail | Enable automatic audit trail tracking |
-| `CREATOR_COLUMN` | string | `'created_by'` | Creator column | Column name for tracking record creator |
-| `UPDATER_COLUMN` | string | `'updated_by'` | Updater column | Column name for tracking record updater |
-| `DELETER_COLUMN` | string | `'deleted_by'` | Deleter column | Column name for tracking record deleter |
-
----
-
-## Configuration File Options
-
-The `config/cruder.php` file provides global configuration options for the package.
-
-### 📊 Query Logging Configuration
-
-| Option | Type | Default | Purpose | Description |
-|--------|------|---------|---------|-------------|
-| `query_logging.enabled` | bool | `false` | Enable logging | Global query logging toggle |
-| `query_logging.log_all_operations` | bool | `true` | Log all operations | Log all CRUD operations by default |
-| `query_logging.log_level` | string | `'debug'` | Log level | Logging level (debug, info, warning, error) |
-| `query_logging.include_bindings` | bool | `true` | Include bindings | Include query bindings in logs |
-| `query_logging.include_execution_time` | bool | `true` | Include execution time | Include query execution time in logs |
-| `query_logging.slow_query_threshold` | int | `1000` | Slow query threshold | Threshold in milliseconds for slow queries |
-| `query_logging.log_slow_queries_only` | bool | `false` | Log slow queries only | Only log queries that exceed threshold |
-
-### 🔧 Operation-Specific Logging
-
-| Operation | Type | Default | Purpose | Description |
-|-----------|------|---------|---------|-------------|
-| `query_logging.operations.find` | bool | `true` | Find operations | Log find/findAll operations |
-| `query_logging.operations.create` | bool | `true` | Create operations | Log create operations |
-| `query_logging.operations.update` | bool | `true` | Update operations | Log update operations |
-| `query_logging.operations.delete` | bool | `true` | Delete operations | Log delete operations |
-| `query_logging.operations.count` | bool | `true` | Count operations | Log count operations |
-| `query_logging.operations.bulk_create` | bool | `true` | Bulk create | Log bulk create operations |
-| `query_logging.operations.bulk_update` | bool | `true` | Bulk update | Log bulk update operations |
-| `query_logging.operations.bulk_delete` | bool | `true` | Bulk delete | Log bulk delete operations |
-
-### 📈 Performance Configuration
-
-| Option | Type | Default | Purpose | Description |
-|--------|------|---------|---------|-------------|
-| `performance.slow_query_log_level` | string | `'warning'` | Slow query log level | Log level for slow queries |
-
----
 
 ## Usage Examples
 
-For comprehensive configuration examples and real-world usage patterns, see the example files:
+### Basic Service Implementation
 
-### 📖 Configuration Examples
-- **[SimpleSalesExample.php](Examples/SimpleSalesExample.php)** - Basic service configuration with common constants
-- **[SalesInventoryExample.php](Examples/SalesInventoryExample.php)** - Advanced configuration with relations and performance settings
-- **[ProductExample.php](Examples/ProductExample.php)** - Validation strategies and custom configurations
-- **[ExportExample.php](Examples/ExportExample.php)** - Export functionality configuration
-- **[ReportExample.php](Examples/ReportExample.php)** - Custom search strategies configuration
+```php
+<?php
 
-### 🔧 Configuration File Examples
-See the main [README.md](README.md) for configuration file setup and environment variable examples.
+namespace App\Services;
 
----
+use App\Models\User;
+use SgFlores\Cruder\BaseCrudService;
 
-## 🔧 Best Practices
+class UserService extends BaseCrudService
+{
+    public function __construct(User $model)
+    {
+        parent::__construct($model);
+    }
 
-### Column Security
-- Always define `DIRECT_FILTERABLE_COLUMNS`, `DIRECT_SORTABLE_COLUMNS`, and `DIRECT_TEXT_SEARCH_COLUMNS` for security
-- Use descriptive names for related columns (e.g., `'user_name'`, `'department_title'`)
+    // Override only the methods you need to customize
+    public function getDirectFilterableColumns(): array
+    {
+        return ['id', 'name', 'email', 'status'];
+    }
 
-### Performance Optimization
-- Enable caching for frequently accessed data
-- Use chunked processing for large datasets
-- Set appropriate cache lifetimes based on data volatility
+    public function getDirectTextSearchColumns(): array
+    {
+        return ['name', 'email'];
+    }
 
-### Audit Trail
-- Enable audit trail for important models
-- Ensure your database has the required audit columns (`created_by`, `updated_by`, `deleted_by`)
+    public function isAuditTrailEnabled(): bool
+    {
+        return true;
+    }
+}
+```
 
-### Query Logging
-- Enable query logging in development
-- Set appropriate slow query thresholds
-- Use different log levels for different environments
+### Advanced Service Implementation
 
----
+```php
+<?php
 
-## 📚 Related Documentation
+namespace App\Services;
 
-- [Main README](README.md) - Package overview and quick start
-- [Architecture Guide](ARCHITECTURE.md) - Package architecture and design patterns
-- [Examples](Examples/) - Real-world usage examples
+use App\Models\Product;
+use SgFlores\Cruder\BaseCrudService;
+
+class ProductService extends BaseCrudService
+{
+    public function __construct(Product $model)
+    {
+        parent::__construct($model);
+    }
+
+    public function getDirectFilterableColumns(): array
+    {
+        return [
+            'id', 'name', 'sku', 'price', 'status',
+            'category_id', 'created_at', 'updated_at'
+        ];
+    }
+
+    public function getRelatedFilterableColumns(): array
+    {
+        return [
+            'category.name',
+            'category.status'
+        ];
+    }
+
+    public function getCollectionRelations(): array
+    {
+        return ['category', 'images'];
+    }
+
+    public function isQueryCacheEnabled(): bool
+    {
+        return true;
+    }
+
+    public function getCacheLifetimeSeconds(): int
+    {
+        return 1800; // 30 minutes
+    }
+
+    public function getCacheTags(): array
+    {
+        return ['products', 'categories'];
+    }
+
+    public function shouldEnableApiResources(): bool
+    {
+        return true;
+    }
+
+    public function getApiResourceClass(): string
+    {
+        return \App\Http\Resources\ProductResource::class;
+    }
+
+    // Dynamic configuration based on runtime conditions
+    public function getDefaultSortColumn(): string
+    {
+        return request()->has('featured') ? 'featured_at' : 'name';
+    }
+}
+```
+
+### Using the Service
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\UserService;
+use App\Models\User;
+
+class UserController extends Controller
+{
+    protected $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
+    public function index()
+    {
+        // The service will use the configured columns and behavior
+        $users = $this->userService->findAll([
+            'search' => request('search'),
+            'status' => 'active',
+            'sort_by' => 'name',
+            'page' => 15
+        ]);
+
+        return response()->json($users);
+    }
+
+    public function show($id)
+    {
+        $user = $this->userService->findById($id);
+        
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        return response()->json($user);
+    }
+
+    public function store(Request $request)
+    {
+        $user = $this->userService->create($request->validated());
+        return response()->json($user, 201);
+    }
+}
+```
+
+## Best Practices
+
+1. **Override Only What You Need**: Don't override methods that use the default values
+2. **Use Type Hints**: Always specify return types for better IDE support
+3. **Document Your Choices**: Add comments explaining why you're overriding specific methods
+4. **Consider Performance**: Use caching and chunked processing for large datasets
+5. **Test Your Configuration**: Ensure your column configurations work as expected
+6. **Avoid Nested Traits**: Don't use traits within traits - use them directly in classes
+7. **Keep Traits Focused**: Each trait should have a single responsibility
+8. **Use Descriptive Names**: Trait names should clearly indicate their purpose
+9. **Follow Interface Naming Patterns**: Use "able" suffix for interfaces that define capabilities
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Method Not Found**: Ensure you're extending the correct base class
+2. **Type Errors**: Check that your return types match the interface
+3. **Column Validation Errors**: Make sure all columns are properly declared in the appropriate methods
+
+### Debugging
+
+Use the service methods to inspect your configuration:
+
+```php
+$service = new UserService(new User());
+
+// Check what columns are filterable
+$filterableColumns = $service->getFilterableColumns();
+
+// Check if caching is enabled
+$cacheEnabled = $service->isQueryCacheEnabled();
+
+// Check cache lifetime
+$cacheLifetime = $service->getCacheLifetimeSeconds();
+```
+
+## Quick Reference
+
+### Query Parameters
+- `getSearchParam()` - URL parameter for text search
+- `getSortByParam()` - URL parameter for sort column
+- `getSortDirectionParam()` - URL parameter for sort direction
+- `getPaginateParam()` - URL parameter for pagination
+- `getLimitParam()` - URL parameter for result limit
+
+### Column Configuration
+- `getDirectFilterableColumns()` - Main table columns for filtering
+- `getDirectTextSearchColumns()` - Main table columns for text search
+- `getDirectSortableColumns()` - Main table columns for sorting
+- `getRelatedFilterableColumns()` - Related table columns for filtering
+- `getRelatedTextSearchColumns()` - Related table columns for text search
+- `getRelatedSortableColumns()` - Related table columns for sorting
+
+### Relations
+- `getCollectionRelations()` - Relations for collection queries
+- `getSingleRecordRelations()` - Relations for single record queries
+
+### Caching
+- `isQueryCacheEnabled()` - Enable/disable query caching
+- `getCacheLifetimeSeconds()` - Cache duration in seconds
+- `getCacheTags()` - Cache tags for invalidation
+
+### CRUD Operations
+- `isAuditTrailEnabled()` - Enable/disable audit trail
+- `getCreatorColumn()` - Column for creator tracking
+- `getUpdaterColumn()` - Column for updater tracking
+- `getDeleterColumn()` - Column for deleter tracking
+
+### Advanced Features
+- `getSelectColumns()` - Specific columns to select
+- `getExcludeColumns()` - Columns to exclude
+- `shouldIncludeSoftDeleted()` - Include soft-deleted records
+- `shouldOnlyShowSoftDeleted()` - Show only soft-deleted records
+- `shouldEnableApiResources()` - Enable API resource transformation
+- `getApiResourceClass()` - API resource class to use
+- `shouldEnableChunkedProcessing()` - Enable chunked processing
+- `getChunkSize()` - Records per chunk
+- `getDatabaseConnection()` - Database connection name

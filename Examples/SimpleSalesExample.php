@@ -26,11 +26,14 @@ class SimpleSalesExample
     protected OrderService $orderService;
     protected CustomerService $customerService;
 
-    public function __construct()
-    {
-        $this->productService = new ProductService(new Product());
-        $this->orderService = new OrderService(new Order());
-        $this->customerService = new CustomerService(new Customer());
+    public function __construct(
+        ProductService $productService,
+        OrderService $orderService,
+        CustomerService $customerService
+    ) {
+        $this->productService = $productService;
+        $this->orderService = $orderService;
+        $this->customerService = $customerService;
     }
 
     /**
@@ -289,24 +292,41 @@ class SimpleSalesExample
  */
 class ProductService extends BaseCrudService
 {
-    // Define which columns can be filtered
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'name', 'sku', 'price', 'status', 'created_at'
-    ];
+    public function __construct(Product $model)
+    {
+        parent::__construct($model);
+    }
 
-    // Define which columns can be sorted
-    protected const DIRECT_SORTABLE_COLUMNS = [
-        'name', 'sku', 'price', 'created_at', 'updated_at'
-    ];
+    public function getDirectFilterableColumns(): array
+    {
+        return [
+            'name', 'sku', 'price', 'status', 'created_at'
+        ];
+    }
 
-    // Define which columns can be searched
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
-        'name', 'description', 'sku'
-    ];
+    public function getDirectSortableColumns(): array
+    {
+        return [
+            'name', 'sku', 'price', 'created_at', 'updated_at'
+        ];
+    }
 
-    // Default relations to load
-    protected const COLLECTION_RELATIONS = [];
-    protected const SINGLE_RECORD_RELATIONS = [];
+    public function getDirectTextSearchColumns(): array
+    {
+        return [
+            'name', 'description', 'sku'
+        ];
+    }
+
+    public function getCollectionRelations(): array
+    {
+        return [];
+    }
+
+    public function getSingleRecordRelations(): array
+    {
+        return [];
+    }
 }
 
 /**
@@ -314,20 +334,41 @@ class ProductService extends BaseCrudService
  */
 class OrderService extends BaseCrudService
 {
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'customer_id', 'order_number', 'status', 'total_amount', 'created_at'
-    ];
+    public function __construct(Order $model)
+    {
+        parent::__construct($model);
+    }
 
-    protected const DIRECT_SORTABLE_COLUMNS = [
-        'order_number', 'status', 'total_amount', 'created_at', 'updated_at'
-    ];
+    public function getDirectFilterableColumns(): array
+    {
+        return [
+            'customer_id', 'order_number', 'status', 'total_amount', 'created_at'
+        ];
+    }
 
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
-        'order_number'
-    ];
+    public function getDirectSortableColumns(): array
+    {
+        return [
+            'order_number', 'status', 'total_amount', 'created_at', 'updated_at'
+        ];
+    }
 
-    protected const COLLECTION_RELATIONS = ['customer'];
-    protected const SINGLE_RECORD_RELATIONS = ['customer', 'items'];
+    public function getDirectTextSearchColumns(): array
+    {
+        return [
+            'order_number'
+        ];
+    }
+
+    public function getCollectionRelations(): array
+    {
+        return ['customer'];
+    }
+
+    public function getSingleRecordRelations(): array
+    {
+        return ['customer', 'items'];
+    }
 }
 
 /**
@@ -335,19 +376,40 @@ class OrderService extends BaseCrudService
  */
 class CustomerService extends BaseCrudService
 {
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'name', 'email', 'phone', 'status'
-    ];
+    public function __construct(Customer $model)
+    {
+        parent::__construct($model);
+    }
 
-    protected const DIRECT_SORTABLE_COLUMNS = [
-        'name', 'email', 'created_at', 'updated_at'
-    ];
+    public function getDirectFilterableColumns(): array
+    {
+        return [
+            'name', 'email', 'phone', 'status'
+        ];
+    }
 
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
-        'name', 'email', 'phone'
-    ];
+    public function getDirectSortableColumns(): array
+    {
+        return [
+            'name', 'email', 'created_at', 'updated_at'
+        ];
+    }
 
-    protected const COLLECTION_RELATIONS = ['orders'];
-    protected const SINGLE_RECORD_RELATIONS = ['orders'];
+    public function getDirectTextSearchColumns(): array
+    {
+        return [
+            'name', 'email', 'phone'
+        ];
+    }
+
+    public function getCollectionRelations(): array
+    {
+        return ['orders'];
+    }
+
+    public function getSingleRecordRelations(): array
+    {
+        return ['orders'];
+    }
 }
 

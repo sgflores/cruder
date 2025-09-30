@@ -16,24 +16,69 @@ use Illuminate\Validation\ValidationException;
  */
 class ProductExample extends BaseCrudService
 {
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'name', 'sku', 'price', 'cost', 'category_id', 'supplier_id', 'status'
-    ];
-
-    protected const DIRECT_SORTABLE_COLUMNS = [
-        'name', 'sku', 'price', 'cost', 'created_at', 'updated_at'
-    ];
-
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
-        'name', 'description', 'sku'
-    ];
-
-    protected const COLLECTION_RELATIONS = ['category', 'supplier'];
-    protected const SINGLE_RECORD_RELATIONS = ['category', 'supplier'];
-
     public function __construct(Product $model)
     {
         parent::__construct($model);
+    }
+
+    // ========================================================================
+    // --- Override Configuration Methods ---
+    // ========================================================================
+
+    /**
+     * Define filterable columns for products.
+     * 
+     * @return array
+     */
+    public function getDirectFilterableColumns(): array
+    {
+        return [
+            'name', 'sku', 'price', 'cost', 'category_id', 'supplier_id', 'status'
+        ];
+    }
+
+    /**
+     * Define sortable columns for products.
+     * 
+     * @return array
+     */
+    public function getDirectSortableColumns(): array
+    {
+        return [
+            'name', 'sku', 'price', 'cost', 'created_at', 'updated_at'
+        ];
+    }
+
+    /**
+     * Define searchable columns for products.
+     * 
+     * @return array
+     */
+    public function getDirectTextSearchColumns(): array
+    {
+        return [
+            'name', 'description', 'sku'
+        ];
+    }
+
+    /**
+     * Define relations to load for collections.
+     * 
+     * @return array
+     */
+    public function getCollectionRelations(): array
+    {
+        return ['category', 'supplier'];
+    }
+
+    /**
+     * Define relations to load for single records.
+     * 
+     * @return array
+     */
+    public function getSingleRecordRelations(): array
+    {
+        return ['category', 'supplier'];
     }
 
     /**
@@ -234,9 +279,9 @@ class ProductExampleUsage
 {
     protected ProductExample $productService;
 
-    public function __construct()
+    public function __construct(ProductExample $productService)
     {
-        $this->productService = new ProductExample(new Product());
+        $this->productService = $productService;
     }
 
     /**

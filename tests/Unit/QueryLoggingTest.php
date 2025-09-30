@@ -20,7 +20,7 @@ class QueryLoggingTest extends TestCase
     {
         parent::setUp();
         
-        $this->userService = new TestUserService();
+        $this->userService = new TestUserService(new User());
         $this->department = Department::factory()->create();
         
         // Clear any existing query log

@@ -18,25 +18,45 @@ use Illuminate\Support\Collection;
  */
 class ReportExample extends BaseReaderService
 {
-    protected const DIRECT_FILTERABLE_COLUMNS = [
-        'customer_id', 'order_number', 'status', 'total_amount', 'created_at'
-    ];
-
-    protected const DIRECT_SORTABLE_COLUMNS = [
-        'order_number', 'status', 'total_amount', 'created_at', 'updated_at'
-    ];
-
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [
-        'order_number'
-    ];
-
-    protected const COLLECTION_RELATIONS = ['customer', 'items'];
-    protected const SINGLE_RECORD_RELATIONS = ['customer', 'items.product'];
-
     public function __construct(Order $model)
     {
         parent::__construct($model);
         $this->setupCustomSearchStrategies();
+    }
+
+    // ========================================================================
+    // --- Override Configuration Methods ---
+    // ========================================================================
+
+    public function getDirectFilterableColumns(): array
+    {
+        return [
+            'customer_id', 'order_number', 'status', 'total_amount', 'created_at'
+        ];
+    }
+
+    public function getDirectSortableColumns(): array
+    {
+        return [
+            'order_number', 'status', 'total_amount', 'created_at', 'updated_at'
+        ];
+    }
+
+    public function getDirectTextSearchColumns(): array
+    {
+        return [
+            'order_number'
+        ];
+    }
+
+    public function getCollectionRelations(): array
+    {
+        return ['customer', 'items'];
+    }
+
+    public function getSingleRecordRelations(): array
+    {
+        return ['customer', 'items.product'];
     }
 
     /**

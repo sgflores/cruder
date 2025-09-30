@@ -15,40 +15,92 @@ use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Services\ExportService;
 use SgFlores\Cruder\Services\SearchService;
+use SgFlores\Cruder\Contracts\ReaderConfigurable;
+use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 
 /**
- * Base Reader Service with SOLID principles implementation.
+ * Base Reader Service - Foundation for Read Operations
  * 
- * This abstract class provides a foundation for read operations following SOLID principles:
- * - Single Responsibility: Each service handles one concern
- * - Open/Closed: Extensible through strategies and hooks
- * - Liskov Substitution: Child classes can be substituted
- * - Interface Segregation: Clear contracts for each service
- * - Dependency Inversion: Depends on abstractions, not concretions
+ * This abstract class provides a comprehensive foundation for read operations in Laravel applications,
+ * implementing SOLID principles and modern PHP best practices.
  * 
- * The service uses the Strategy pattern for search and export functionality,
- * and the Observer pattern for hooks, making it highly extensible and maintainable.
+ * ## Architecture Overview
  * 
- * COLUMN VALIDATION:
+ * ### SOLID Principles Implementation
+ * - **Single Responsibility**: Handles only read operations and data retrieval
+ * - **Open/Closed**: Extensible through strategies, traits, and configuration methods
+ * - **Liskov Substitution**: Child classes can be substituted without breaking functionality
+ * - **Interface Segregation**: Implements ReaderConfigurable interface for clear contracts
+ * - **Dependency Inversion**: Depends on abstractions (interfaces) rather than concrete implementations
+ * 
+ * ### Design Patterns Used
+ * - **Strategy Pattern**: For search and export functionality
+ * - **Observer Pattern**: For event-driven hooks and listeners
+ * - **Trait Pattern**: For configuration management and code reuse
+ * 
+ * ## Configuration System
+ * 
+ * The service uses a trait-based configuration system that provides:
+ * - **Type Safety**: All configuration methods have proper return type hints
+ * - **IDE Support**: Full autocompletion and IntelliSense support
+ * - **Flexibility**: Methods can return computed values, not just constants
+ * - **Override Capability**: Child classes can easily override any configuration
+ * 
+ * ### Key Configuration Areas
+ * - **Query Parameters**: URL parameter names (search, sort_by, etc.)
+ * - **Column Configuration**: Which columns can be filtered, sorted, or searched
+ * - **Relations**: Default relations to eager load
+ * - **Caching**: Query result caching configuration
+ * - **Advanced Features**: API resources, chunked processing, soft deletes
+ * 
+ * ## Security Features
+ * 
+ * ### Column Validation
  * The service includes built-in column validation to ensure security and prevent
- * unauthorized access to sensitive data. Only columns declared in the following
- * constants can be used for filtering, sorting, or searching:
- * - DIRECT_FILTERABLE_COLUMNS: Direct database columns for exact filtering
- * - RELATED_FILTERABLE_COLUMNS: Related model columns for exact filtering
- * - DIRECT_SORTABLE_COLUMNS: Direct database columns for sorting
- * - RELATED_SORTABLE_COLUMNS: Related model columns for sorting
- * - DIRECT_TEXT_SEARCH_COLUMNS: Direct database columns for text search
- * - RELATED_TEXT_SEARCH_COLUMNS: Related model columns for text search
+ * unauthorized access to sensitive data. Only columns declared in configuration methods
+ * can be used for filtering, sorting, or searching:
  * 
- * Attempting to use undeclared columns will throw an InvalidArgumentException
+ * - `getDirectFilterableColumns()`: Direct database columns for exact filtering
+ * - `getRelatedFilterableColumns()`: Related model columns for exact filtering
+ * - `getDirectSortableColumns()`: Direct database columns for sorting
+ * - `getRelatedSortableColumns()`: Related model columns for sorting
+ * - `getDirectTextSearchColumns()`: Direct database columns for text search
+ * - `getRelatedTextSearchColumns()`: Related model columns for text search
+ * 
+ * Attempting to use undeclared columns will throw an `InvalidArgumentException`
  * with a helpful error message listing the allowed columns.
+ * 
+ * ## Usage Example
+ * 
+ * ```php
+ * class UserService extends BaseReaderService
+ * {
+ *     public function __construct(User $model)
+ *     {
+ *         parent::__construct($model);
+ *     }
+ * 
+ *     // Override configuration methods as needed
+ *     public function getDirectFilterableColumns(): array
+ *     {
+ *         return ['id', 'name', 'email', 'status'];
+ *     }
+ * 
+ *     public function getDirectTextSearchColumns(): array
+ *     {
+ *         return ['name', 'email'];
+ *     }
+ * }
+ * ```
  */
-abstract class BaseReaderService
+abstract class BaseReaderService implements ReaderConfigurable
 {
+    use ReaderConfigurationTrait;
+
     /**
      * The Eloquent model instance this service operates on.
      * 
@@ -84,61 +136,6 @@ abstract class BaseReaderService
      */
     protected $queryLogger;
 
-
-    /**
-     * Query parameter key for search term.
-     * 
-     * @example 'search' for ?search=term
-     * @var string
-     */
-    protected const SEARCH_PARAM = 'search';
-    
-    /**
-     * Query parameter key for sort column.
-     * 
-     * @example 'sort_by' for ?sort_by=name
-     * @var string
-     */
-    protected const SORT_BY_PARAM = 'sort_by';
-    
-    /**
-     * Query parameter key for sort direction.
-     * 
-     * @example 'sort_direction' for ?sort_direction=desc
-     * @var string
-     */
-    protected const SORT_DIRECTION_PARAM = 'sort_direction';
-    
-    /**
-     * Query parameter key for pagination size.
-     * 
-     * @example 'page' for ?page=20
-     * @var string
-     */
-    protected const PAGINATE_PARAM = 'page';
-    
-    /**
-     * Query parameter key for result limit.
-     * 
-     * @example 'limit' for ?limit=10
-     * @var string
-     */
-    protected const LIMIT_PARAM = 'limit';
-    
-    /**
-     * Default relations to eager load for collection queries.
-     * 
-     * @var array
-     */
-    protected const COLLECTION_RELATIONS = [];
-    
-    /**
-     * Default relations to eager load for single record queries.
-     * 
-     * @var array
-     */
-    protected const SINGLE_RECORD_RELATIONS = [];
-
     /**
      * Magic column name for counting records.
      * 
@@ -146,168 +143,14 @@ abstract class BaseReaderService
      */
     protected const MAGIC_COUNT = '_is_count_';
     
-    // ========================================================================
-    // --- Direct Column Constants ---
-    // ========================================================================
-    
-    /**
-     * Direct database columns available for exact matching filters.
-     * 
-     * @var array
-     */
-    protected const DIRECT_FILTERABLE_COLUMNS = [];
-    
-    /**
-     * Direct database columns available for fuzzy text search (LIKE queries).
-     * 
-     * @var array
-     */
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = [];
-    
-    /**
-     * Direct database columns available for result sorting.
-     * 
-     * @var array
-     */
-    protected const DIRECT_SORTABLE_COLUMNS = [];
-    
-    // ========================================================================
-    // --- Related Column Constants ---
-    // ========================================================================
-    
-    /**
-     * Related model columns available for exact matching filters.
-     * 
-     * @var array
-     */
-    protected const RELATED_FILTERABLE_COLUMNS = [];
-    
-    /**
-     * Related model columns available for fuzzy text search (LIKE queries).
-     * 
-     * @var array
-     */
-    protected const RELATED_TEXT_SEARCH_COLUMNS = [];
-    
-    /**
-     * Related model columns available for result sorting.
-     * 
-     * @var array
-     */
-    protected const RELATED_SORTABLE_COLUMNS = [];
 
     /**
-     * Default column for sorting when no sort parameter is provided.
+     * Constructor - Initializes the Reader Service
      * 
-     * @var string
-     */
-    protected const DEFAULT_SORT_COLUMN = 'id';
-    
-    /**
-     * Default sort direction when no direction parameter is provided.
+     * Sets up the service with the provided model and initializes all required dependencies.
+     * The service automatically configures default strategies and services.
      * 
-     * @var string 'asc'|'desc'
-     */
-    protected const DEFAULT_SORT_DIRECTION = 'asc';
-    
-    /**
-     * Whether to enable query result caching for performance optimization.
-     * 
-     * @var bool
-     */
-    protected const QUERY_CACHE_ENABLED = false;
-    
-    /**
-     * Cache lifetime in seconds for query results.
-     * 
-     * How long cached query results should be stored before expiring.
-     * 
-     * @var int
-     */
-    protected const CACHE_LIFETIME_SECONDS = 3600; // 1 hour
-    
-    // ========================================================================
-    // --- Advanced Features Constants ---
-    // ========================================================================
-    
-    /**
-     * Direct columns to always select.
-     * 
-     * @var array
-     */
-    protected const SELECT_COLUMNS = [];
-    
-    /**
-     * Direct columns to exclude from selection.
-     * 
-     * @var array
-     */
-    protected const EXCLUDE_COLUMNS = [];
-    
-    /**
-     * Whether to include soft-deleted records by default.
-     * 
-     * @var bool
-     */
-    protected const INCLUDE_SOFT_DELETED = false;
-    
-    /**
-     * Whether to only show soft-deleted records.
-     * 
-     * @var bool
-     */
-    protected const ONLY_SOFT_DELETED = false;
-    
-    /**
-     * Whether to transform responses using API resources.
-     * 
-     * @var bool
-     */
-    protected const ENABLE_API_RESOURCES = false;
-    
-    /**
-     * API resource class for transforming responses.
-     * 
-     * @var string|null
-     */
-    protected const API_RESOURCE_CLASS = null;
-    
-    /**
-     * Whether to use chunked processing for large datasets.
-     * 
-     * @var bool
-     */
-    protected const ENABLE_CHUNKED_PROCESSING = false;
-    
-    /**
-     * Chunk size for processing large datasets.
-     * 
-     * @var int
-     */
-    protected const CHUNK_SIZE = 1000;
-    
-    /**
-     * Cache tags for more granular cache invalidation.
-     * 
-     * @var array
-     */
-    protected const CACHE_TAGS = [];
-    
-    /**
-     * Database connection to use for this service.
-     * 
-     * @var string|null
-     */
-    protected const DATABASE_CONNECTION = null;
-    
-
-    /**
-     * BaseReaderService constructor.
-     * 
-     * Initializes the service with the model and sets up the service dependencies.
-     * Child classes can override configureServices() to customize behavior.
-     * 
-     * @param Model $model The Eloquent model instance to work with
+     * @param Model $model The Eloquent model instance this service will operate on
      */
     public function __construct(Model $model)
     {
@@ -316,16 +159,19 @@ abstract class BaseReaderService
     }
     
     /**
-     * Clears the cache for this model's table.
+     * Clears the cache for this model's table and related cache tags.
+     * 
+     * Uses granular cache tags for precise invalidation. Falls back to clearing
+     * all cache if tags are not supported (e.g., in testing environments).
      * 
      * @return void
      */
     protected function clearCache(): void
     {
-        if (static::QUERY_CACHE_ENABLED) {
+        if ($this->isQueryCacheEnabled()) {
             try {
                 // Use granular cache tags for more precise invalidation
-                Cache::tags($this->getCacheTags())->flush();
+                Cache::tags($this->buildCacheTags())->flush();
             } catch (\Exception $e) {
                 // Fallback to clearing all cache if tags don't work (e.g., in testing)
                 Cache::flush();
@@ -334,10 +180,11 @@ abstract class BaseReaderService
     }
 
     /**
-     * Initializes the service dependencies.
+     * Initializes all service dependencies and strategies.
      * 
-     * Sets up the search, export, and hook services with default search strategy.
-     * Child classes can override configureServices() to add custom strategies.
+     * Sets up the search, export, event, and query logging services with their
+     * default configurations. Child classes can override configureServices()
+     * to add custom strategies or modify service behavior.
      * 
      * @return void
      */
@@ -385,10 +232,17 @@ abstract class BaseReaderService
     /**
      * Retrieves a collection of records with advanced filtering, sorting, and pagination.
      * 
-     * Main method for fetching multiple records with comprehensive query options.
-     * Supports caching, pagination, eager loading, and custom filtering.
+     * This is the main method for fetching multiple records with comprehensive query options.
+     * It supports:
+     * - Advanced filtering with column validation
+     * - Text search across multiple columns
+     * - Sorting with validation
+     * - Pagination and limiting
+     * - Eager loading of relations
+     * - Query result caching
+     * - Performance monitoring
      * 
-     * @param array $filters Query options including paginate, limit, search, sort_by, sort_direction, and additional filter options
+     * @param array $filters Query options including paginate, limit, search, sort_by, sort_direction, and column filters
      * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
      * @return Collection|LengthAwarePaginator Collection of models or paginated results
      */
@@ -398,10 +252,10 @@ abstract class BaseReaderService
         $this->eventService->fire('before_find', $filters);
         
         // Determine if result should be paginated
-        $isPaginated = isset($filters[static::PAGINATE_PARAM]) || isset($filters[static::LIMIT_PARAM]);
+        $isPaginated = isset($filters[$this->getPaginateParam()]) || isset($filters[$this->getLimitParam()]);
 
         // Resolve which relations to eager load
-        $relationsToLoad = $this->resolveRelationsToLoad($withRelations, static::COLLECTION_RELATIONS);
+        $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getCollectionRelations());
         $query = $this->createQueryBuilder()->with($relationsToLoad);
         
         // Apply all filters (search, sorting, column filters, etc.)
@@ -413,15 +267,15 @@ abstract class BaseReaderService
         $startTime = microtime(true);
 
         // Use caching for non-paginated queries if enabled
-        if (static::QUERY_CACHE_ENABLED && !$isPaginated) {
+        if ($this->isQueryCacheEnabled() && !$isPaginated) {
             $cacheKey = $this->buildCacheKey($filters, 'all');
-            $result = Cache::remember($cacheKey, static::CACHE_LIFETIME_SECONDS, fn() => $query->get());
+            $result = Cache::remember($cacheKey, $this->getCacheLifetimeSeconds(), fn() => $query->get());
         } else {
             // Execute query with pagination or limit if specified
-            if (isset($filters[static::PAGINATE_PARAM]) && !is_array($filters[static::PAGINATE_PARAM])) {
-                $result = $query->paginate($filters[static::PAGINATE_PARAM]);
-            } elseif (isset($filters[static::LIMIT_PARAM]) && !is_array($filters[static::LIMIT_PARAM])) {
-                $result = $query->limit($filters[static::LIMIT_PARAM])->get();
+            if (isset($filters[$this->getPaginateParam()]) && !is_array($filters[$this->getPaginateParam()])) {
+                $result = $query->paginate($filters[$this->getPaginateParam()]);
+            } elseif (isset($filters[$this->getLimitParam()]) && !is_array($filters[$this->getLimitParam()])) {
+                $result = $query->limit($filters[$this->getLimitParam()])->get();
             } else {
                 $result = $query->get();
             }
@@ -446,14 +300,17 @@ abstract class BaseReaderService
     /**
      * Retrieves a single record by its primary key with optional eager loading.
      * 
+     * This method provides a simple way to fetch a single record by its primary key.
+     * It supports eager loading of relations and response transformation.
+     * 
      * @param int|string $id The primary key value to search for
      * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
-     * @return Model|null The found model or null if not found
+     * @return Model|null The found model with relations loaded, or null if not found
      */
     public function findById(int|string $id, $withRelations = null): ?Model
     {
         $primaryKey = $this->model->getKeyName();
-        $relationsToLoad = $this->resolveRelationsToLoad($withRelations, static::SINGLE_RECORD_RELATIONS);
+        $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
         
         $result = $this->model->newQuery()
                            ->with($relationsToLoad)
@@ -472,10 +329,10 @@ abstract class BaseReaderService
      */
     public function count(array $filters = [], bool $includeSoftDeleted = false): int
     {
-        if (static::QUERY_CACHE_ENABLED) {
+        if ($this->isQueryCacheEnabled()) {
             $cacheKey = $this->buildCacheKey($filters, 'count');
             
-            return Cache::remember($cacheKey, static::CACHE_LIFETIME_SECONDS, function () use ($filters, $includeSoftDeleted) {
+            return Cache::remember($cacheKey, $this->getCacheLifetimeSeconds(), function () use ($filters, $includeSoftDeleted) {
                 $filters[static::MAGIC_COUNT] = true; 
                 $query = $this->createQueryBuilder($includeSoftDeleted);
                 $query = $this->applyQueryFilters($query, $filters);
@@ -514,14 +371,14 @@ abstract class BaseReaderService
      */
     public function findAllChunked(array $filters = [], callable $callback = null): void
     {
-        if (!static::ENABLE_CHUNKED_PROCESSING) {
+        if (!$this->shouldEnableChunkedProcessing()) {
             return;
         }
         
         $query = $this->createQueryBuilder();
         $query = $this->applyQueryFilters($query, $filters);
         
-        $query->chunk(static::CHUNK_SIZE, function ($records) use ($callback) {
+        $query->chunk($this->getChunkSize(), function ($records) use ($callback) {
             if ($callback) {
                 $callback($records);
             }
@@ -542,8 +399,8 @@ abstract class BaseReaderService
     {
         $queryBuilder = $this->model->newQuery();
         
-        if (static::DATABASE_CONNECTION) {
-            $queryBuilder->on(static::DATABASE_CONNECTION);
+        if ($this->getDatabaseConnection()) {
+            $queryBuilder->on($this->getDatabaseConnection());
         }
         
         if ($includeSoftDeleted && in_array(SoftDeletes::class, class_uses_recursive($this->model))) {
@@ -610,8 +467,6 @@ abstract class BaseReaderService
      */
     protected function applyQueryFilters(Builder $query, array $filters): Builder
     {
-        $searchTerm = $filters[static::SEARCH_PARAM] ?? null;
-
         // 1. Apply soft delete constraints (withTrashed, onlyTrashed)
         $this->applySoftDeleteConstraints($query, $filters);
 
@@ -656,8 +511,8 @@ abstract class BaseReaderService
             if ($strategyName === 'like') {
                 // Validate that searchable columns are declared for like strategy
                 $searchableColumns = array_merge(
-                    static::DIRECT_TEXT_SEARCH_COLUMNS,
-                    static::RELATED_TEXT_SEARCH_COLUMNS
+                    $this->getDirectTextSearchColumns(),
+                    $this->getRelatedTextSearchColumns()
                 );
                 
                 if (empty($searchableColumns)) {
@@ -669,11 +524,11 @@ abstract class BaseReaderService
                 
                 // Apply like strategy with configuration
                 $config = [
-                    'term' => $filters[static::SEARCH_PARAM] ?? '',
+                    'term' => $filters[$this->getSearchParam()] ?? '',
                     'type' => 'like',
                     'enabled' => true,
-                    'direct_columns' => static::DIRECT_TEXT_SEARCH_COLUMNS,
-                    'related_columns' => static::RELATED_TEXT_SEARCH_COLUMNS
+                    'direct_columns' => $this->getDirectTextSearchColumns(),
+                    'related_columns' => $this->getRelatedTextSearchColumns()
                 ];
 
                 $this->searchService->search($query, $filters, $config);
@@ -699,8 +554,8 @@ abstract class BaseReaderService
     {
         // Get all allowed filterable columns
         $allowedColumns = array_merge(
-            static::DIRECT_FILTERABLE_COLUMNS,
-            static::RELATED_FILTERABLE_COLUMNS
+            $this->getDirectFilterableColumns(),
+            $this->getRelatedFilterableColumns()
         );
 
         foreach ($queryOptions as $columnName => $filterValue) {
@@ -753,8 +608,8 @@ abstract class BaseReaderService
      */
     protected function applySorting(Builder $queryBuilder, array $queryOptions): void
     {
-        $sortColumn = $queryOptions[static::SORT_BY_PARAM] ?? static::DEFAULT_SORT_COLUMN;
-        $sortDirection = $queryOptions[static::SORT_DIRECTION_PARAM] ?? static::DEFAULT_SORT_DIRECTION;
+        $sortColumn = $queryOptions[$this->getSortByParam()] ?? $this->getDefaultSortColumn();
+        $sortDirection = $queryOptions[$this->getSortDirectionParam()] ?? $this->getDefaultSortDirection();
 
         if (is_array($sortColumn) || is_array($sortDirection)) {
             return;
@@ -762,8 +617,8 @@ abstract class BaseReaderService
 
         // Get all allowed sortable columns
         $allowedColumns = array_merge(
-            static::DIRECT_SORTABLE_COLUMNS,
-            static::RELATED_SORTABLE_COLUMNS
+            $this->getDirectSortableColumns(),
+            $this->getRelatedSortableColumns()
         );
 
         // Validate sort column is in allowed sortable columns
@@ -809,9 +664,9 @@ abstract class BaseReaderService
     protected function isDirectColumn(string $column): bool
     {
         $allDirectColumns = array_merge(
-            static::DIRECT_TEXT_SEARCH_COLUMNS,
-            static::DIRECT_FILTERABLE_COLUMNS,
-            static::DIRECT_SORTABLE_COLUMNS
+            $this->getDirectTextSearchColumns(),
+            $this->getDirectFilterableColumns(),
+            $this->getDirectSortableColumns()
         );
         
         return in_array($column, $allDirectColumns);
@@ -826,9 +681,9 @@ abstract class BaseReaderService
     protected function isRelatedColumn(string $column): bool
     {
         $allRelatedColumns = array_merge(
-            static::RELATED_TEXT_SEARCH_COLUMNS,
-            static::RELATED_FILTERABLE_COLUMNS,
-            static::RELATED_SORTABLE_COLUMNS
+            $this->getRelatedTextSearchColumns(),
+            $this->getRelatedFilterableColumns(),
+            $this->getRelatedSortableColumns()
         );
         
         return in_array($column, $allRelatedColumns);
@@ -885,9 +740,9 @@ abstract class BaseReaderService
             return;
         }
 
-        if (static::INCLUDE_SOFT_DELETED) {
+        if ($this->shouldIncludeSoftDeleted()) {
             $query->withTrashed();
-        } elseif (static::ONLY_SOFT_DELETED) {
+        } elseif ($this->shouldOnlyShowSoftDeleted()) {
             $query->onlyTrashed();
         }
     }
@@ -901,13 +756,13 @@ abstract class BaseReaderService
      */
     protected function applyFieldSelection(Builder $query, array $filters): void
     {
-        if (!empty(static::SELECT_COLUMNS)) {
-            $query->select(static::SELECT_COLUMNS);
+        if (!empty($this->getSelectColumns())) {
+            $query->select($this->getSelectColumns());
         }
         
-        if (!empty(static::EXCLUDE_COLUMNS)) {
+        if (!empty($this->getExcludeColumns())) {
             $query->selectRaw('*');
-            foreach (static::EXCLUDE_COLUMNS as $column) {
+            foreach ($this->getExcludeColumns() as $column) {
                 $query->selectRaw("NULL as {$column}");
             }
         }
@@ -933,8 +788,8 @@ abstract class BaseReaderService
         
         // Get all allowed filterable columns for validation
         $allowedColumns = array_merge(
-            static::DIRECT_FILTERABLE_COLUMNS,
-            static::RELATED_FILTERABLE_COLUMNS
+            $this->getDirectFilterableColumns(),
+            $this->getRelatedFilterableColumns()
         );
         
         foreach ($queryOptions as $columnName => $filterValue) {
@@ -1047,11 +902,11 @@ abstract class BaseReaderService
      */
     protected function transformResponse($data, array $filters = []): mixed
     {
-        if (!static::ENABLE_API_RESOURCES || !static::API_RESOURCE_CLASS) {
+        if (!$this->shouldEnableApiResources() || !$this->getApiResourceClass()) {
             return $data;
         }
         
-        $resourceClass = static::API_RESOURCE_CLASS;
+        $resourceClass = $this->getApiResourceClass();
         
         if ($data instanceof LengthAwarePaginator) {
             return $data->through(fn($item) => new $resourceClass($item));
@@ -1069,12 +924,12 @@ abstract class BaseReaderService
      * 
      * @return array Array of cache tags
      */
-    protected function getCacheTags(): array
+    protected function buildCacheTags(): array
     {
         $tags = [$this->model->getTable()];
         
-        if (!empty(static::CACHE_TAGS)) {
-            $tags = array_merge($tags, static::CACHE_TAGS);
+        if (!empty($this->getCacheTags())) {
+            $tags = array_merge($tags, $this->getCacheTags());
         }
         
         return $tags;
@@ -1089,11 +944,11 @@ abstract class BaseReaderService
     protected function isReservedParameterKey(string $columnName): bool
     {
         return in_array($columnName, [
-            static::SEARCH_PARAM,
-            static::SORT_BY_PARAM,
-            static::SORT_DIRECTION_PARAM,
-            static::PAGINATE_PARAM,
-            static::LIMIT_PARAM,
+            $this->getSearchParam(),
+            $this->getSortByParam(),
+            $this->getSortDirectionParam(),
+            $this->getPaginateParam(),
+            $this->getLimitParam(),
             static::MAGIC_COUNT
         ]);
     }
@@ -1115,7 +970,7 @@ abstract class BaseReaderService
         
         $suggestions = collect();
         
-        foreach (static::DIRECT_TEXT_SEARCH_COLUMNS as $column) {
+        foreach ($this->getDirectTextSearchColumns() as $column) {
             $results = $query->select($column)
                             ->where($column, 'like', "%{$term}%")
                             ->distinct()
@@ -1230,8 +1085,8 @@ abstract class BaseReaderService
     public function getFilterableColumns(): array
     {
         return array_merge(
-            static::DIRECT_FILTERABLE_COLUMNS,
-            static::RELATED_FILTERABLE_COLUMNS
+            $this->getDirectFilterableColumns(),
+            $this->getRelatedFilterableColumns()
         );
     }
 
@@ -1243,8 +1098,8 @@ abstract class BaseReaderService
     public function getSortableColumns(): array
     {
         return array_merge(
-            static::DIRECT_SORTABLE_COLUMNS,
-            static::RELATED_SORTABLE_COLUMNS
+            $this->getDirectSortableColumns(),
+            $this->getRelatedSortableColumns()
         );
     }
 
@@ -1256,8 +1111,8 @@ abstract class BaseReaderService
     public function getSearchableColumns(): array
     {
         return array_merge(
-            static::DIRECT_TEXT_SEARCH_COLUMNS,
-            static::RELATED_TEXT_SEARCH_COLUMNS
+            $this->getDirectTextSearchColumns(),
+            $this->getRelatedTextSearchColumns()
         );
     }
 
