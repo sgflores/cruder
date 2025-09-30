@@ -9,14 +9,9 @@ use SgFlores\Cruder\Tests\Models\User;
 
 class TestUserService extends BaseCrudService
 {
-    protected function getModelClass(): string
+    public function __construct(User $user)
     {
-        return User::class;
-    }
-
-    public function __construct()
-    {
-        parent::__construct(new User());
+        parent::__construct($user);
 
         // Add test event listeners
         $this->getEventService()->listen('after_create', function ($user) {
@@ -32,59 +27,138 @@ class TestUserService extends BaseCrudService
         $this->getExportService()->addStrategy('csv', new CsvExportStrategy());
         $this->getExportService()->addStrategy('json', new JsonExportStrategy());
     }
-    
-    // Direct column constants
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name'];
-    protected const DIRECT_FILTERABLE_COLUMNS = ['id', 'name', 'department_id', 'created_at', 'updated_at', 'deleted_at'];
-    protected const DIRECT_SORTABLE_COLUMNS = ['id', 'name', 'created_at', 'updated_at', 'deleted_at'];
-    
-    // Related column constants
-    protected const RELATED_TEXT_SEARCH_COLUMNS = ['department_name'];
-    protected const RELATED_FILTERABLE_COLUMNS = ['department_id'];
-    protected const RELATED_SORTABLE_COLUMNS = ['department_name'];
-    
-    // Collection relations
-    protected const COLLECTION_RELATIONS = ['department'];
-    protected const SINGLE_RECORD_RELATIONS = ['department', 'createdBy', 'updatedBy'];
-    
-    // Search configuration
 
-    protected const PAGINATE_PARAM = 'paginate';
-    protected const LIMIT_PARAM = 'limit';
-    
-    // Audit trail
-    protected const AUDIT_TRAIL_ENABLED = true;
-    protected const CREATOR_COLUMN = 'created_by';
-    protected const UPDATER_COLUMN = 'updated_by';
-    protected const DELETER_COLUMN = 'deleted_by';
+    // ========================================================================
+    // --- Override Configuration Methods ---
+    // ========================================================================
 
-    
-    // Cache configuration
-    protected const QUERY_CACHE_ENABLED = true;
-    protected const CACHE_LIFETIME_SECONDS = 3600;
-    
-    // Performance monitoring
-    // Note: LOG_SLOW_QUERIES and SLOW_QUERY_THRESHOLD removed - now handled by QueryLogger config
-    
-    // Soft delete configuration
-    protected const INCLUDE_SOFT_DELETED = false;
-    protected const ONLY_SOFT_DELETED = false;
-    
-    // Field selection
-    protected const SELECT_COLUMNS = [];
-    protected const EXCLUDE_COLUMNS = [];
-    
-    // API resources
-    protected const ENABLE_API_RESOURCES = false;
-    protected const API_RESOURCE_CLASS = null;
-    
-    // Chunked processing
-    protected const ENABLE_CHUNKED_PROCESSING = false;
-    protected const CHUNK_SIZE = 1000;
-    
-    // Cache tags
-    protected const CACHE_TAGS = ['users', 'test'];
-    
-    // Database connection
-    protected const DATABASE_CONNECTION = null;
+    public function getDirectTextSearchColumns(): array
+    {
+        return ['name'];
+    }
+
+    public function getDirectFilterableColumns(): array
+    {
+        return ['id', 'name', 'department_id', 'created_at', 'updated_at', 'deleted_at'];
+    }
+
+    public function getDirectSortableColumns(): array
+    {
+        return ['id', 'name', 'created_at', 'updated_at', 'deleted_at'];
+    }
+
+    public function getRelatedTextSearchColumns(): array
+    {
+        return ['department_name'];
+    }
+
+    public function getRelatedFilterableColumns(): array
+    {
+        return ['department_id'];
+    }
+
+    public function getRelatedSortableColumns(): array
+    {
+        return ['department_name'];
+    }
+
+    public function getCollectionRelations(): array
+    {
+        return ['department'];
+    }
+
+    public function getSingleRecordRelations(): array
+    {
+        return ['department', 'createdBy', 'updatedBy'];
+    }
+
+    public function getPaginateParam(): string
+    {
+        return 'paginate';
+    }
+
+    public function getLimitParam(): string
+    {
+        return 'limit';
+    }
+
+    public function isAuditTrailEnabled(): bool
+    {
+        return true;
+    }
+
+    public function getCreatorColumn(): string
+    {
+        return 'created_by';
+    }
+
+    public function getUpdaterColumn(): string
+    {
+        return 'updated_by';
+    }
+
+    public function getDeleterColumn(): string
+    {
+        return 'deleted_by';
+    }
+
+    public function isQueryCacheEnabled(): bool
+    {
+        return true;
+    }
+
+    public function getCacheLifetimeSeconds(): int
+    {
+        return 3600;
+    }
+
+    public function shouldIncludeSoftDeleted(): bool
+    {
+        return false;
+    }
+
+    public function shouldOnlyShowSoftDeleted(): bool
+    {
+        return false;
+    }
+
+    public function getSelectColumns(): array
+    {
+        return [];
+    }
+
+    public function getExcludeColumns(): array
+    {
+        return [];
+    }
+
+    public function shouldEnableApiResources(): bool
+    {
+        return false;
+    }
+
+    public function getApiResourceClass(): ?string
+    {
+        return null;
+    }
+
+    public function shouldEnableChunkedProcessing(): bool
+    {
+        return false;
+    }
+
+    public function getChunkSize(): int
+    {
+        return 1000;
+    }
+
+    public function getCacheTags(): array
+    {
+        return ['users', 'test'];
+    }
+
+    public function getDatabaseConnection(): ?string
+    {
+        return null;
+    }
 }

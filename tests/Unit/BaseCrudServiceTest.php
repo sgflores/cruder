@@ -21,7 +21,7 @@ class BaseCrudServiceTest extends TestCase
     {
         parent::setUp();
         
-        $this->userService = new TestUserService();
+        $this->userService = new TestUserService(new User());
         
         // Create test data
         $this->department = Department::create([

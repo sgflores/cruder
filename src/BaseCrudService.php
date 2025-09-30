@@ -15,43 +15,123 @@ use SgFlores\Cruder\Services\ValidationService;
 use SgFlores\Cruder\Services\ValidationFactory;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\BaseReaderService;
-use SgFlores\Cruder\Traits\PerformanceMonitoring;
+use SgFlores\Cruder\Contracts\CrudConfigurable;
+use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
+use SgFlores\Cruder\Traits\CrudConfigurationTrait;
+use SgFlores\Cruder\Traits\PerformanceMonitoringTrait;
 use SgFlores\Cruder\Exceptions\ValidationException as CruderValidationException;
 use SgFlores\Cruder\Strategies\Validation\ValidationStrategyInterface;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Base CRUD Service with SOLID principles implementation.
+ * Base CRUD Service - Complete CRUD Operations Foundation
  * 
- * This abstract class extends BaseReaderService to provide full CRUD operations
- * following SOLID principles:
- * - Single Responsibility: Each service handles one concern
- * - Open/Closed: Extensible through strategies and hooks
- * - Liskov Substitution: Child classes can be substituted
- * - Interface Segregation: Clear contracts for each service
- * - Dependency Inversion: Depends on abstractions, not concretions
+ * This abstract class extends BaseReaderService to provide comprehensive CRUD (Create, Read, Update, Delete)
+ * operations for Laravel applications, implementing SOLID principles and modern PHP best practices.
  * 
- * The service uses the Strategy pattern for search and export functionality,
- * and the Observer pattern for hooks, making it highly extensible and maintainable.
+ * ## Architecture Overview
  * 
- * COLUMN VALIDATION:
- * The service includes built-in column validation to ensure security and prevent
- * unauthorized access to sensitive data. Only columns declared in the following
- * constants can be used for filtering, sorting, or searching:
- * - DIRECT_FILTERABLE_COLUMNS: Direct database columns for exact filtering
- * - RELATED_FILTERABLE_COLUMNS: Related model columns for exact filtering
- * - DIRECT_SORTABLE_COLUMNS: Direct database columns for sorting
- * - RELATED_SORTABLE_COLUMNS: Related model columns for sorting
- * - DIRECT_TEXT_SEARCH_COLUMNS: Direct database columns for text search
- * - RELATED_TEXT_SEARCH_COLUMNS: Related model columns for text search
+ * ### Inheritance Hierarchy
+ * - **Extends**: `BaseReaderService` (inherits all read operations)
+ * - **Implements**: `CrudConfigurable` (CRUD-specific configuration)
+ * - **Uses**: `CrudConfigurationTrait` (audit trail and CRUD configuration)
  * 
- * Attempting to use undeclared columns will throw an InvalidArgumentException
- * with a helpful error message listing the allowed columns.
+ * ### SOLID Principles Implementation
+ * - **Single Responsibility**: Handles CRUD operations and data persistence
+ * - **Open/Closed**: Extensible through strategies, traits, and configuration methods
+ * - **Liskov Substitution**: Child classes can be substituted without breaking functionality
+ * - **Interface Segregation**: Implements both ReaderConfigurable and CrudConfigurable interfaces
+ * - **Dependency Inversion**: Depends on abstractions (interfaces) rather than concrete implementations
+ * 
+ * ### Design Patterns Used
+ * - **Strategy Pattern**: For validation, search, and export functionality
+ * - **Observer Pattern**: For event-driven hooks and listeners
+ * - **Trait Pattern**: For configuration management and code reuse
+ * - **Template Method Pattern**: For consistent CRUD operation flow
+ * 
+ * ## CRUD Operations
+ * 
+ * ### Single Record Operations
+ * - **Create**: `create()` - Creates new records with validation and audit trail
+ * - **Read**: Inherited from BaseReaderService (`findAll()`, `findById()`, etc.)
+ * - **Update**: `update()` - Updates existing records with validation and audit trail
+ * - **Delete**: `delete()` - Soft or hard deletes records with audit trail
+ * 
+ * ### Bulk Operations
+ * - **Bulk Create**: `bulkCreate()` - Creates multiple records efficiently
+ * - **Bulk Update**: `bulkUpdate()` - Updates multiple records matching criteria
+ * - **Bulk Delete**: `bulkDelete()` - Deletes multiple records matching criteria
+ * 
+ * ## Configuration System
+ * 
+ * The service uses a trait-based configuration system that provides:
+ * - **Type Safety**: All configuration methods have proper return type hints
+ * - **IDE Support**: Full autocompletion and IntelliSense support
+ * - **Flexibility**: Methods can return computed values, not just constants
+ * - **Override Capability**: Child classes can easily override any configuration
+ * 
+ * ### CRUD-Specific Configuration
+ * - **Audit Trail**: `isAuditTrailEnabled()`, `getCreatorColumn()`, `getUpdaterColumn()`, `getDeleterColumn()`
+ * - **Validation**: Built-in validation support with custom strategies
+ * - **Events**: Before/after hooks for all CRUD operations
+ * 
+ * ## Security Features
+ * 
+ * ### Column Validation
+ * Inherits all security features from BaseReaderService:
+ * - Column validation for filtering, sorting, and searching
+ * - Protection against unauthorized data access
+ * - Clear error messages for invalid column usage
+ * 
+ * ### Audit Trail
+ * Automatic tracking of record changes:
+ * - **Creator**: Who created the record (`created_by`)
+ * - **Updater**: Who last updated the record (`updated_by`)
+ * - **Deleter**: Who soft-deleted the record (`deleted_by`)
+ * 
+ * ## Usage Example
+ * 
+ * ```php
+ * class UserService extends BaseCrudService
+ * {
+ *     public function __construct(User $model)
+ *     {
+ *         parent::__construct($model);
+ *     }
+ * 
+ *     // Override configuration methods as needed
+ *     public function getDirectFilterableColumns(): array
+ *     {
+ *         return ['id', 'name', 'email', 'status'];
+ *     }
+ * 
+ *     public function isAuditTrailEnabled(): bool
+ *     {
+ *         return true;
+ *     }
+ * 
+ *     public function getCreatorColumn(): string
+ *     {
+ *         return 'created_by';
+ *     }
+ * }
+ * ```
+ * 
+ * ## Event System
+ * 
+ * The service provides comprehensive event hooks for all CRUD operations:
+ * - `before_create`, `after_create`
+ * - `before_update`, `after_update`
+ * - `before_delete`, `after_delete`
+ * - `before_bulk_create`, `after_bulk_create`
+ * - `before_bulk_update`, `after_bulk_update`
+ * - `before_bulk_delete`, `after_bulk_delete`
  */
-abstract class BaseCrudService extends BaseReaderService
+abstract class BaseCrudService extends BaseReaderService implements CrudConfigurable
 {
-    use PerformanceMonitoring;
+    use PerformanceMonitoringTrait;
+    use CrudConfigurationTrait;
 
     /**
      * Validation service for managing validation strategies.
@@ -69,40 +149,12 @@ abstract class BaseCrudService extends BaseReaderService
     protected $eventService;
 
     /**
-     * Whether to enable automatic audit trail for record changes.
+     * Constructor - Initializes the CRUD Service
      * 
-     * @var bool
-     */
-    protected const AUDIT_TRAIL_ENABLED = false;
-    
-    /**
-     * Database column name for tracking record creator.
+     * Sets up the service with the provided model and initializes all required dependencies.
+     * The service automatically configures validation and event services for CRUD operations.
      * 
-     * @var string
-     */
-    protected const CREATOR_COLUMN = 'created_by';
-    
-    /**
-     * Database column name for tracking record updater.
-     * 
-     * @var string
-     */
-    protected const UPDATER_COLUMN = 'updated_by';
-    
-    /**
-     * Database column name for tracking record deleter (soft delete).
-     * 
-     * @var string
-     */
-    protected const DELETER_COLUMN = 'deleted_by';
-
-    /**
-     * BaseCrudService constructor.
-     * 
-     * Initializes the service with the model and sets up the service dependencies.
-     * Child classes can override configureServices() to customize behavior.
-     * 
-     * @param Model $model The Eloquent model instance to work with
+     * @param Model $model The Eloquent model instance this service will operate on
      */
     public function __construct(Model $model)
     {
@@ -116,12 +168,20 @@ abstract class BaseCrudService extends BaseReaderService
     // ========================================================================
     
     /**
-     * Creates a new record with optional eager loading of relations.
+     * Creates a new record with validation, audit trail, and optional eager loading.
+     * 
+     * This method handles the complete creation workflow:
+     * 1. Validates data using provided rules or strategies
+     * 2. Applies audit trail fields (created_by) if enabled
+     * 3. Creates the record in a database transaction
+     * 4. Eager loads specified relations
+     * 5. Fires before/after events
+     * 6. Clears cache for fresh data
      * 
      * @param array $data The data to create the record with
-     * @param mixed $withRelations Relations to eager load on the returned model (boolean, array, string, or null)
-     * @param array|ValidationStrategyInterface|null $validationRules Validation rules array or strategy interface
-     * @return Model The created model
+     * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
+     * @param array|ValidationStrategyInterface|null $validationRules Validation rules or strategy
+     * @return Model The created model with relations loaded
      * @throws \Exception If creation fails
      */
     public function create(array $data, $withRelations = null, $validationRules = null): Model
@@ -148,7 +208,7 @@ abstract class BaseCrudService extends BaseReaderService
             $createdModel = $this->model->create($processedData);
             
                 // 6. If relations are requested, the model is reloaded with those relations eager loaded.
-            $relationsToLoad = $this->resolveRelationsToLoad($withRelations, static::SINGLE_RECORD_RELATIONS);
+            $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
             if (!empty($relationsToLoad)) {
                 $primaryKey = $this->model->getKeyName();
                 $createdModel = $this->model->newQuery()
@@ -173,13 +233,22 @@ abstract class BaseCrudService extends BaseReaderService
     }
 
     /**
-     * Updates an existing record by its primary key with optional eager loading.
+     * Updates an existing record with validation, audit trail, and optional eager loading.
+     * 
+     * This method handles the complete update workflow:
+     * 1. Finds the existing record by primary key
+     * 2. Validates data using provided rules or strategies
+     * 3. Applies audit trail fields (updated_by) if enabled
+     * 4. Updates the record in a database transaction
+     * 5. Eager loads specified relations
+     * 6. Fires before/after events
+     * 7. Clears cache for fresh data
      * 
      * @param int|string $id The primary key value of the record to update
      * @param array $data The data to update the record with
-     * @param mixed $withRelations Relations to eager load on the returned model (boolean, array, string, or null)
-     * @param array|ValidationStrategyInterface|null $validationRules Validation rules array or strategy interface
-     * @return Model|null The updated model or null if not found
+     * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
+     * @param array|ValidationStrategyInterface|null $validationRules Validation rules or strategy
+     * @return Model|null The updated model with relations loaded, or null if not found
      * @throws \Exception If update fails
      */
     public function update(int|string $id, array $data, $withRelations = null, $validationRules = null): ?Model
@@ -202,7 +271,7 @@ abstract class BaseCrudService extends BaseReaderService
             $existingModel->update($processedData);
             
             // Re-load with relations using dynamic PK
-            $relationsToLoad = $this->resolveRelationsToLoad($withRelations, static::SINGLE_RECORD_RELATIONS);
+            $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
             $updatedModel = $this->model->newQuery()
                                ->with($relationsToLoad)
                                ->where($primaryKey, $id)
@@ -223,7 +292,14 @@ abstract class BaseCrudService extends BaseReaderService
     }
 
     /**
-     * Deletes a record by its primary key with optional force deletion.
+     * Deletes a record with audit trail and optional force deletion.
+     * 
+     * This method handles the complete deletion workflow:
+     * 1. Finds the existing record by primary key
+     * 2. Applies audit trail fields (deleted_by) if soft delete is enabled
+     * 3. Deletes the record (soft or hard) in a database transaction
+     * 4. Fires before/after events
+     * 5. Clears cache for fresh data
      * 
      * @param int|string $id The primary key value of the record to delete
      * @param bool $force Whether to force delete (bypass soft delete)
@@ -286,23 +362,23 @@ abstract class BaseCrudService extends BaseReaderService
                     $data = $this->validateData($data, 'bulk_create', $validationRules);
                 }
                 
-        // Add auditing fields if enabled
-        if (static::AUDIT_TRAIL_ENABLED && Auth::check() && $this->model->isFillable(static::CREATOR_COLUMN)) {
-            $currentUserId = Auth::id();
-            $data = array_map(function ($recordItem) use ($currentUserId) {
-                $recordItem[static::CREATOR_COLUMN] = $currentUserId;
-                $recordItem['created_at'] = now();
-                $recordItem['updated_at'] = now();
-                return $recordItem;
-            }, $data);
-        }
+                // Add auditing fields if enabled
+                if ($this->isAuditTrailEnabled() && Auth::check() && $this->model->isFillable($this->getCreatorColumn())) {
+                    $currentUserId = Auth::id();
+                    $data = array_map(function ($recordItem) use ($currentUserId) {
+                        $recordItem[$this->getCreatorColumn()] = $currentUserId;
+                        $recordItem['created_at'] = now();
+                        $recordItem['updated_at'] = now();
+                        return $recordItem;
+                    }, $data);
+                }
 
-        $success = $this->model->insert($data);
-                        if ($success) {
-                            // Fire after_bulk_create event
-                            $this->eventService->fire('after_bulk_create', $data);
-                        }
-        return $success;
+                $success = $this->model->insert($data);
+                if ($success) {
+                    // Fire after_bulk_create event
+                    $this->eventService->fire('after_bulk_create', $data);
+                }
+                return $success;
             }, [
                 'data_count' => count($data)
             ]);
@@ -336,14 +412,14 @@ abstract class BaseCrudService extends BaseReaderService
                 // Validate data if validation rules provided
                 if ($validationRules !== null) {
                     $data = $this->validateData($data, 'bulk_update', $validationRules);
-        }
+                }
 
-        $query = $this->createQueryBuilder();
-        $query = $this->applyQueryFilters($query, $filters);
-        
-        $processedData = $this->prepareUpdateData($data); // Adds updated_by
-        
-        $updatedCount = $query->update($processedData);
+                $query = $this->createQueryBuilder();
+                $query = $this->applyQueryFilters($query, $filters);
+                
+                $processedData = $this->prepareUpdateData($data); // Adds updated_by
+                
+                $updatedCount = $query->update($processedData);
                 if ($updatedCount > 0) {
                     // Fire after_bulk_update event
                     $this->eventService->fire('after_bulk_update', [
@@ -352,7 +428,7 @@ abstract class BaseCrudService extends BaseReaderService
                         'data' => $processedData
                     ]);
                 }
-        return $updatedCount;
+                return $updatedCount;
             }, [
                 'filters' => $filters,
                 'data_count' => count($data)
@@ -390,9 +466,9 @@ abstract class BaseCrudService extends BaseReaderService
                 $deletedCount = $query->forceDelete();
             } else {
                 // Apply deleted_by logic before soft deleting
-                if (static::AUDIT_TRAIL_ENABLED && Auth::check() && in_array(SoftDeletes::class, class_uses_recursive($this->model)) && $this->model->isFillable(static::DELETER_COLUMN)) {
+                if ($this->isAuditTrailEnabled() && Auth::check() && in_array(SoftDeletes::class, class_uses_recursive($this->model)) && $this->model->isFillable($this->getDeleterColumn())) {
                     $query->update([
-                        static::DELETER_COLUMN => Auth::id(),
+                        $this->getDeleterColumn() => Auth::id(),
                     ]);
                 }
                 $deletedCount = $query->delete();
@@ -490,8 +566,8 @@ abstract class BaseCrudService extends BaseReaderService
      */
     protected function prepareCreateData(array $data): array
     {
-        if (static::AUDIT_TRAIL_ENABLED && Auth::check() && $this->model->isFillable(static::CREATOR_COLUMN)) {
-            $data[static::CREATOR_COLUMN] = Auth::id();
+        if ($this->isAuditTrailEnabled() && Auth::check() && $this->model->isFillable($this->getCreatorColumn())) {
+            $data[$this->getCreatorColumn()] = Auth::id();
         }
         return $data;
     }
@@ -504,8 +580,8 @@ abstract class BaseCrudService extends BaseReaderService
      */
     protected function prepareUpdateData(array $data): array
     {
-        if (static::AUDIT_TRAIL_ENABLED && Auth::check() && $this->model->isFillable(static::UPDATER_COLUMN)) {
-            $data[static::UPDATER_COLUMN] = Auth::id();
+        if ($this->isAuditTrailEnabled() && Auth::check() && $this->model->isFillable($this->getUpdaterColumn())) {
+            $data[$this->getUpdaterColumn()] = Auth::id();
         }
         return $data;
     }
@@ -518,8 +594,8 @@ abstract class BaseCrudService extends BaseReaderService
      */
     protected function prepareDeleteData(Model $model): Model
     {
-        if (static::AUDIT_TRAIL_ENABLED && Auth::check() && in_array(SoftDeletes::class, class_uses_recursive($model)) && $model->isFillable(static::DELETER_COLUMN)) {
-            $model->{static::DELETER_COLUMN} = Auth::id();
+        if ($this->isAuditTrailEnabled() && Auth::check() && in_array(SoftDeletes::class, class_uses_recursive($model)) && $model->isFillable($this->getDeleterColumn())) {
+            $model->{$this->getDeleterColumn()} = Auth::id();
             $model->save();
         }
         return $model;

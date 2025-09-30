@@ -17,6 +17,8 @@ A powerful, feature-rich CRUD service package for Laravel applications built on 
 - **Column Validation** - Secure column validation for all operations
 - **Event System** - Extensible event system for custom business logic
 - **Strategy Pattern** - Pluggable strategies for search, export, and validation
+- **Trait-Based Configuration** - Type-safe, IDE-friendly configuration system
+- **Audit Trail** - Automatic tracking of record changes (created_by, updated_by, deleted_by)
 
 ## 📋 Requirements
 
@@ -64,21 +66,35 @@ class UserService extends BaseCrudService
         parent::__construct($user);
     }
     
-    // Define searchable columns
-    protected const DIRECT_TEXT_SEARCH_COLUMNS = ['name', 'email'];
+    // Override configuration methods as needed
+    public function getDirectTextSearchColumns(): array
+    {
+        return ['name', 'email'];
+    }
     
-    // Define filterable columns
-    protected const DIRECT_FILTERABLE_COLUMNS = ['status', 'department_id'];
+    public function getDirectFilterableColumns(): array
+    {
+        return ['status', 'department_id'];
+    }
     
-    // Define sortable columns
-    protected const DIRECT_SORTABLE_COLUMNS = ['name', 'email', 'created_at'];
+    public function getDirectSortableColumns(): array
+    {
+        return ['name', 'email', 'created_at'];
+    }
+    
+    public function isAuditTrailEnabled(): bool
+    {
+        return true;
+    }
 }
 ```
+
+> **💡 Configuration**: The service uses a trait-based configuration system. See [CONFIGURATION.md](CONFIGURATION.md) for all available configuration methods and examples.
 
 ### 2. Basic Usage
 
 ```php
-$userService = new UserService();
+$userService = new UserService(new User());
 
 // Find all users with filtering and pagination
 $users = $userService->findAll([
@@ -119,8 +135,8 @@ $jsonData = $userService->export('json', [], ['name', 'email']);
 
 ## 📚 Documentation
 
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Complete configuration methods reference and examples
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Package architecture, design patterns, and request lifecycle
-- **[CONFIGURATION.md](CONFIGURATION.md)** - Complete configuration options and constants reference
 - **[Examples/](Examples/)** - Real-world examples and usage patterns
 
 ### 📖 Available Examples

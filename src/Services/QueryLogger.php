@@ -5,11 +5,11 @@ namespace SgFlores\Cruder\Services;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Builder;
-use SgFlores\Cruder\Traits\CruderTrait;
+use SgFlores\Cruder\Traits\PerformanceMonitoringTrait;
 
 class QueryLogger
 {
-    use CruderTrait;
+    use PerformanceMonitoringTrait;
     
     /**
      * Log a query for a specific operation.

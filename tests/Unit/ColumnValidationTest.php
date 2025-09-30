@@ -19,7 +19,7 @@ class ColumnValidationTest extends TestCase
     {
         parent::setUp();
         
-        $this->userService = new TestUserService();
+        $this->userService = new TestUserService(new User());
         $this->department = Department::factory()->create();
     }
 
@@ -279,8 +279,15 @@ class ColumnValidationTest extends TestCase
     {
         // Create a service with no searchable columns
         $service = new class(new User()) extends TestUserService {
-            protected const DIRECT_TEXT_SEARCH_COLUMNS = [];
-            protected const RELATED_TEXT_SEARCH_COLUMNS = [];
+            public function getDirectTextSearchColumns(): array
+            {
+                return [];
+            }
+            
+            public function getRelatedTextSearchColumns(): array
+            {
+                return [];
+            }
         };
         
         $this->expectException(InvalidArgumentException::class);
