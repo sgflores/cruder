@@ -2,6 +2,7 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
+use PHPUnit\Framework\Attributes\Test;
 use SgFlores\Cruder\Tests\Services\TestUserService;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Models\Department;
@@ -35,7 +36,7 @@ class BaseCrudServiceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_find_all_records()
     {
         $users = $this->userService->findAll();
@@ -45,7 +46,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertTrue($users->first()->relationLoaded('department'));
     }
 
-    /** @test */
+    #[Test]
     public function it_can_find_record_by_id()
     {
         $user = $this->userService->findById($this->user->id);
@@ -55,7 +56,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertTrue($user->relationLoaded('department'));
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_null_when_record_not_found()
     {
         $user = $this->userService->findById(999);
@@ -63,7 +64,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertNull($user);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_create_a_record()
     {
         $userData = [
@@ -79,7 +80,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertTrue($user->relationLoaded('department'));
     }
 
-    /** @test */
+    #[Test]
     public function it_can_update_a_record()
     {
         $updateData = [
@@ -93,7 +94,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertTrue($updatedUser->relationLoaded('department'));
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_null_when_updating_non_existent_record()
     {
         $updateData = ['name' => 'Updated Name'];
@@ -102,7 +103,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertNull($updatedUser);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_delete_a_record()
     {
         $deleted = $this->userService->delete($this->user->id);
@@ -111,7 +112,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertSoftDeleted('test_users', ['id' => $this->user->id]);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_false_when_deleting_non_existent_record()
     {
         $deleted = $this->userService->delete(999);
@@ -120,7 +121,7 @@ class BaseCrudServiceTest extends TestCase
     }
 
 
-    /** @test */
+    #[Test]
     public function it_can_search_records_by_text()
     {
         // Create another user
@@ -138,7 +139,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertEquals('Jane Smith', $janeUsers->first()->name);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_sort_records()
     {
         // Create another user
@@ -154,7 +155,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertEquals('John Doe', $usersDesc->first()->name);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_paginate_results()
     {
         // Create multiple users
@@ -173,7 +174,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertEquals(6, $paginatedUsers->total()); // 5 new + 1 existing
     }
 
-    /** @test */
+    #[Test]
     public function it_can_limit_results()
     {
         // Create multiple users
@@ -190,7 +191,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertCount(3, $limitedUsers);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_count_records()
     {
         // Create more users
@@ -206,7 +207,7 @@ class BaseCrudServiceTest extends TestCase
         $this->assertEquals(4, $totalCount); // 1 existing + 3 new
     }
 
-    /** @test */
+    #[Test]
     public function it_can_perform_bulk_create()
     {
         $usersData = [
@@ -227,7 +228,7 @@ class BaseCrudServiceTest extends TestCase
     }
 
 
-    /** @test */
+    #[Test]
     public function it_can_perform_bulk_delete()
     {
         // Create more users

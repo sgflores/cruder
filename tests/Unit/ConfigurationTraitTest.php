@@ -2,6 +2,7 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
+use PHPUnit\Framework\Attributes\Test;
 use SgFlores\Cruder\Tests\TestCase;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
@@ -17,7 +18,7 @@ class ConfigurationTraitTest extends TestCase
         $this->userService = new TestUserService(new User());
     }
 
-    /** @test */
+    #[Test]
     public function it_uses_trait_configuration_methods(): void
     {
         // Test that the service uses the trait configuration methods
@@ -31,7 +32,7 @@ class ConfigurationTraitTest extends TestCase
         $this->assertEquals(['department', 'createdBy', 'updatedBy'], $this->userService->getSingleRecordRelations());
     }
 
-    /** @test */
+    #[Test]
     public function it_uses_default_configuration_values(): void
     {
         // Test that the service uses default values from the trait
@@ -52,11 +53,10 @@ class ConfigurationTraitTest extends TestCase
         $this->assertNull($this->userService->getApiResourceClass());
         $this->assertFalse($this->userService->shouldEnableChunkedProcessing());
         $this->assertEquals(1000, $this->userService->getChunkSize());
-        $this->assertEquals(['users', 'test'], $this->userService->getCacheTags());
         $this->assertNull($this->userService->getDatabaseConnection());
     }
 
-    /** @test */
+    #[Test]
     public function it_uses_crud_configuration_values(): void
     {
         // Test that the service uses CRUD-specific configuration values
@@ -66,7 +66,7 @@ class ConfigurationTraitTest extends TestCase
         $this->assertEquals('deleted_by', $this->userService->getDeleterColumn());
     }
 
-    /** @test */
+    #[Test]
     public function it_can_override_configuration_methods(): void
     {
         // Create a service that overrides configuration methods
@@ -86,7 +86,7 @@ class ConfigurationTraitTest extends TestCase
         $this->assertFalse($service->isAuditTrailEnabled());
     }
 
-    /** @test */
+    #[Test]
     public function it_implements_configurable_interfaces(): void
     {
         // Test that the service implements the configurable interfaces

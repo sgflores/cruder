@@ -218,12 +218,6 @@ interface ReaderConfigurable
      */
     public function getChunkSize(): int;
     
-    /**
-     * Cache tags for more granular cache invalidation.
-     * 
-     * @return array
-     */
-    public function getCacheTags(): array;
     
     /**
      * Database connection to use for this service.

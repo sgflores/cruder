@@ -68,16 +68,10 @@ trait PerformanceMonitoringTrait
      */
     protected function clearCache(): void
     {
-        // Check if the class has the QUERY_CACHE_ENABLED constant
-        $reflection = new \ReflectionClass($this);
-        if ($reflection->hasConstant('QUERY_CACHE_ENABLED') && $reflection->getConstant('QUERY_CACHE_ENABLED')) {
-            try {
-                // Use granular cache tags for more precise invalidation
-                \Illuminate\Support\Facades\Cache::tags($this->getCacheTags())->flush();
-            } catch (\Exception $e) {
-                // Fallback to clearing all cache if tags don't work (e.g., in testing)
-                \Illuminate\Support\Facades\Cache::flush();
-            }
+        // Check if query cache is enabled using the configuration method
+        if (method_exists($this, 'isQueryCacheEnabled') && $this->isQueryCacheEnabled()) {
+            // Clear cache using simple cache operations
+            \Illuminate\Support\Facades\Cache::flush();
         }
     }
     
