@@ -19,23 +19,7 @@
     "require-dev": {
         "orchestra/testbench": "^8.0|^9.0|^10.0",
         "phpunit/phpunit": "^10.0|^11.0",
-        "mockery/mockery": "^1.6",
-        "illuminate/foundation": "^10.0|^11.0|^12.0",
-        "illuminate/config": "^10.0|^11.0|^12.0",
-        "illuminate/console": "^10.0|^11.0|^12.0",
-        "illuminate/http": "^10.0|^11.0|^12.0",
-        "illuminate/routing": "^10.0|^11.0|^12.0",
-        "illuminate/events": "^10.0|^11.0|^12.0",
-        "illuminate/filesystem": "^10.0|^11.0|^12.0",
-        "illuminate/container": "^10.0|^11.0|^12.0",
-        "illuminate/contracts": "^10.0|^11.0|^12.0",
-        "illuminate/encryption": "^10.0|^11.0|^12.0",
-        "illuminate/hashing": "^10.0|^11.0|^12.0",
-        "illuminate/log": "^10.0|^11.0|^12.0",
-        "illuminate/mail": "^10.0|^11.0|^12.0",
-        "illuminate/queue": "^10.0|^11.0|^12.0",
-        "illuminate/translation": "^10.0|^11.0|^12.0",
-        "illuminate/view": "^10.0|^11.0|^12.0"
+        "mockery/mockery": "^1.6"
     },
     "autoload": {
         "psr-4": {
