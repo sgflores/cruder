@@ -167,18 +167,6 @@ class UserService extends BaseCrudService
         return 1800; // 30 minutes
     }
 
-    /**
-     * Define cache tags for granular invalidation.
-     * 
-     * @return array
-     */
-    public function getCacheTags(): array
-    {
-        return [
-            'users',
-            'user_departments'
-        ];
-    }
 
     /**
      * Enable API resources for consistent response format.

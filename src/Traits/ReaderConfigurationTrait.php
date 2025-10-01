@@ -296,15 +296,6 @@ trait ReaderConfigurationTrait
         return 1000;
     }
     
-    /**
-     * Cache tags for more granular cache invalidation.
-     * 
-     * @return array
-     */
-    public function getCacheTags(): array
-    {
-        return [];
-    }
     
     /**
      * Database connection to use for this service.

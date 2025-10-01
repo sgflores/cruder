@@ -159,23 +159,15 @@ abstract class BaseReaderService implements ReaderConfigurable
     }
     
     /**
-     * Clears the cache for this model's table and related cache tags.
-     * 
-     * Uses granular cache tags for precise invalidation. Falls back to clearing
-     * all cache if tags are not supported (e.g., in testing environments).
+     * Clears the cache for this model's table.
      * 
      * @return void
      */
     protected function clearCache(): void
     {
         if ($this->isQueryCacheEnabled()) {
-            try {
-                // Use granular cache tags for more precise invalidation
-                Cache::tags($this->buildCacheTags())->flush();
-            } catch (\Exception $e) {
-                // Fallback to clearing all cache if tags don't work (e.g., in testing)
-                Cache::flush();
-            }
+            // Clear all cache for this model's table
+            Cache::flush();
         }
     }
 
@@ -919,21 +911,6 @@ abstract class BaseReaderService implements ReaderConfigurable
         return new $resourceClass($data);
     }
 
-    /**
-     * Gets cache tags for more granular cache invalidation.
-     * 
-     * @return array Array of cache tags
-     */
-    protected function buildCacheTags(): array
-    {
-        $tags = [$this->model->getTable()];
-        
-        if (!empty($this->getCacheTags())) {
-            $tags = array_merge($tags, $this->getCacheTags());
-        }
-        
-        return $tags;
-    }
 
     /**
      * Checks if a column name is a reserved parameter key.

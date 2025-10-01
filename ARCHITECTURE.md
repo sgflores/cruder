@@ -240,7 +240,6 @@ The package uses a trait-based configuration system that provides type safety, I
 
 ### Caching Strategy
 - **Query Result Caching**: Cache frequently accessed data
-- **Cache Tags**: Granular cache invalidation
 - **Configurable Lifetime**: Set cache expiration times
 
 ### Memory Management

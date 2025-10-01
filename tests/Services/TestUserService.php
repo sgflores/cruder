@@ -152,10 +152,6 @@ class TestUserService extends BaseCrudService
         return 1000;
     }
 
-    public function getCacheTags(): array
-    {
-        return ['users', 'test'];
-    }
 
     public function getDatabaseConnection(): ?string
     {

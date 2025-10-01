@@ -125,8 +125,6 @@ public function isQueryCacheEnabled(): bool        // Default: false
 public function getCacheLifetimeSeconds(): int     // Default: 3600
 // Returns the number of seconds to cache query results
 
-public function getCacheTags(): array              // Default: []
-// Returns cache tags for precise cache invalidation
 ```
 
 ### Advanced Features
@@ -261,10 +259,6 @@ class ProductService extends BaseCrudService
         return 1800; // 30 minutes
     }
 
-    public function getCacheTags(): array
-    {
-        return ['products', 'categories'];
-    }
 
     public function shouldEnableApiResources(): bool
     {
@@ -396,7 +390,6 @@ $cacheLifetime = $service->getCacheLifetimeSeconds();
 ### Caching
 - `isQueryCacheEnabled()` - Enable/disable query caching
 - `getCacheLifetimeSeconds()` - Cache duration in seconds
-- `getCacheTags()` - Cache tags for invalidation
 
 ### CRUD Operations
 - `isAuditTrailEnabled()` - Enable/disable audit trail
