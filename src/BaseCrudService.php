@@ -202,23 +202,23 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                 $validatedData = ValidationFactory::createValidator($data, $validationRules, 'create');
 
                 // 4. The validated data is further prepared (e.g., audit fields like created_by) before saving.
-            $processedData = $this->prepareCreateData($validatedData);
+                $processedData = $this->prepareCreateData($validatedData);
 
                 // 5. The model is created in the database.
-            $createdModel = $this->model->create($processedData);
+                $createdModel = $this->model->create($processedData);
             
                 // 6. If relations are requested, the model is reloaded with those relations eager loaded.
-            $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
-            if (!empty($relationsToLoad)) {
-                $primaryKey = $this->model->getKeyName();
-                $createdModel = $this->model->newQuery()
-                                          ->with($relationsToLoad)
-                                          ->where($primaryKey, $createdModel->{$primaryKey})
-                                          ->first();
-            }
+                $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
+                if (!empty($relationsToLoad)) {
+                    $primaryKey = $this->model->getKeyName();
+                    $createdModel = $this->model->newQuery()
+                        ->with($relationsToLoad)
+                        ->where($primaryKey, $createdModel->{$primaryKey})
+                        ->first();
+                }
             
                 // 7. The result is transformed (e.g., for API output or further processing).
-            $result = $this->transformResponse($createdModel);
+                $result = $this->transformResponse($createdModel);
             
                 // 8. After creation, an event is fired for hooks or listeners.
                 $this->eventService->fire('after_create', $result);
@@ -267,15 +267,15 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
             return $this->executeWithTimingAndCache('update', function () use ($existingModel, $data, $id, $primaryKey, $withRelations, $validationRules) {
                 // Validate data using ValidationFactory
                 $validatedData = ValidationFactory::createValidator($data, $validationRules, 'update', ['model' => $existingModel]);
-            $processedData = $this->prepareUpdateData($validatedData);
-            $existingModel->update($processedData);
-            
-            // Re-load with relations using dynamic PK
-            $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
-            $updatedModel = $this->model->newQuery()
-                               ->with($relationsToLoad)
-                               ->where($primaryKey, $id)
-                               ->first();
+                $processedData = $this->prepareUpdateData($validatedData);
+                $existingModel->update($processedData);
+                
+                // Re-load with relations using dynamic PK
+                $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
+                $updatedModel = $this->model->newQuery()
+                    ->with($relationsToLoad)
+                    ->where($primaryKey, $id)
+                    ->first();
             
                 $result = $this->transformResponse($updatedModel);
                 
@@ -320,17 +320,17 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
         
         return DB::transaction(function () use ($modelToDelete, $force, $id) {
             return $this->executeWithTimingAndCache('delete', function () use ($modelToDelete, $force) {
-            if (!$force && method_exists($modelToDelete, 'bootSoftDeletes')) {
-                $modelToDelete = $this->prepareDeleteData($modelToDelete);
-            }
-            $deletionSuccessful = $force ? (bool) $modelToDelete->forceDelete() : (bool) $modelToDelete->delete();
-            
-            if ($deletionSuccessful) {
+                if (!$force && method_exists($modelToDelete, 'bootSoftDeletes')) {
+                    $modelToDelete = $this->prepareDeleteData($modelToDelete);
+                }
+                $deletionSuccessful = $force ? (bool) $modelToDelete->forceDelete() : (bool) $modelToDelete->delete();
+                
+                if ($deletionSuccessful) {
                     // Fire after_delete event
                     $this->eventService->fire('after_delete', $modelToDelete);
-            }
-                    
-            return $deletionSuccessful;
+                }
+                        
+                return $deletionSuccessful;
             }, [
                 'id' => $modelToDelete->getKey(),
                 'force' => $force
@@ -459,19 +459,20 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
 
         return DB::transaction(function () use ($filters, $force) {
             return $this->executeWithTimingAndCache('bulk_delete', function () use ($filters, $force) {
-        $query = $this->createQueryBuilder();
-        $query = $this->applyQueryFilters($query, $filters);
-        
-            if ($force) {
-                $deletedCount = $query->forceDelete();
-            } else {
-                // Apply deleted_by logic before soft deleting
-                if ($this->isAuditTrailEnabled() && Auth::check() && in_array(SoftDeletes::class, class_uses_recursive($this->model)) && $this->model->isFillable($this->getDeleterColumn())) {
-                    $query->update([
-                        $this->getDeleterColumn() => Auth::id(),
-                    ]);
-                }
-                $deletedCount = $query->delete();
+                $query = $this->createQueryBuilder();
+                $query = $this->applyQueryFilters($query, $filters);
+            
+                if ($force) {
+                    $deletedCount = $query->forceDelete();
+                } else {
+                    // Apply deleted_by logic before soft deleting
+                    if ($this->isAuditTrailEnabled() && Auth::check() && in_array(SoftDeletes::class, class_uses_recursive($this->model)) && $this->model->isFillable($this->getDeleterColumn())) {
+                        $query->update([
+                            $this->getDeleterColumn() => Auth::id(),
+                        ]);
+                    }
+                    
+                    $deletedCount = $query->delete();
                 }
 
                 if ($deletedCount > 0) {

@@ -57,6 +57,11 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $this->assertInstanceOf(Builder::class, $result);
     }
 
+    public function test_key_returns_correct_value(): void
+    {
+        $this->assertEquals('like', $this->strategy::key());
+    }
+
     public function test_search_with_related_columns(): void
     {
         $config = [

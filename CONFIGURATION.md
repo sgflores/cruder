@@ -174,6 +174,30 @@ public function getDeleterColumn(): string         // Default: 'deleted_by'
 // Returns the column name for tracking who soft-deleted the record
 ```
 
+### Search Strategy Configuration
+
+```php
+public function shouldEnforceSearchStrategies(): bool  // Default: false
+// Determines if the service should only use registered search strategies
+// When enabled, bypasses default search implementation completely
+
+public function getDefaultSearchStrategy(): ?string    // Default: null
+// Returns the default search strategy to use when strategy enforcement is enabled
+// If null, the first registered strategy will be used
+
+public function getSearchStrategyParam(): string       // Default: 'searchStrategy'
+// Returns the URL parameter name for specifying single search strategy
+// Used in filters: ['searchStrategy' => 'topCustomers']
+
+public function getStrategiesParam(): string           // Default: 'strategies'
+// Returns the URL parameter name for specifying multiple search strategies
+// Used in filters: ['strategies' => 'like,fulltext']
+
+public function shouldAllowMultipleSearchStrategies(): bool  // Default: false
+// Determines if multiple strategies can be executed simultaneously
+// When enabled, strategies are combined with AND logic
+```
+
 ## Usage Examples
 
 ### Basic Service Implementation
@@ -274,6 +298,106 @@ class ProductService extends BaseCrudService
     public function getDefaultSortColumn(): string
     {
         return request()->has('featured') ? 'featured_at' : 'name';
+    }
+}
+```
+
+### Strategy Enforcement Service Implementation
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Models\Order;
+use SgFlores\Cruder\BaseReaderService;
+use SgFlores\Cruder\Strategies\Search\SearchStrategyInterface;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
+
+class SalesReportService extends BaseReaderService
+{
+    public function __construct(Order $model)
+    {
+        parent::__construct($model);
+        $this->setupCustomSearchStrategies();
+    }
+
+    // Enable strategy enforcement for reporting
+    public function shouldEnforceSearchStrategies(): bool
+    {
+        return true;
+    }
+
+    public function getDefaultSearchStrategy(): ?string
+    {
+        return 'topCustomers';
+    }
+
+    public function getSearchStrategyParam(): string
+    {
+        return 'searchStrategy';
+    }
+
+    public function shouldAllowMultipleSearchStrategies(): bool
+    {
+        return true;
+    }
+
+    protected function setupCustomSearchStrategies(): void
+    {
+        $this->getSearchService()->addStrategy(TopCustomersStrategy::key(), new TopCustomersStrategy());
+        $this->getSearchService()->addStrategy(TopProductsStrategy::key(), new TopProductsStrategy());
+        $this->getSearchService()->addStrategy(SalesByDateStrategy::key(), new SalesByDateStrategy());
+    }
+
+    // Custom methods for each strategy
+    public function getTopCustomers(int $limit = 10)
+    {
+        return $this->findAll(['searchStrategy' => TopCustomersStrategy::key(), 'limit' => $limit]);
+    }
+
+    public function getTopProducts(int $limit = 10)
+    {
+        return $this->findAll(['searchStrategy' => TopProductsStrategy::key(), 'limit' => $limit]);
+    }
+
+    public function getSalesByDate(string $startDate, string $endDate)
+    {
+        return $this->findAll([
+            'searchStrategy' => SalesByDateStrategy::key(),
+            'start_date' => $startDate,
+            'end_date' => $endDate
+        ]);
+    }
+}
+
+// Custom search strategy implementation
+class TopCustomersStrategy implements SearchStrategyInterface
+{
+    public static function key(): string
+    {
+        return 'topCustomers';
+    }
+
+    public function search(Builder|QueryBuilder|null $query, array $filters, array $config = []): Builder|QueryBuilder
+    {
+        return DB::table('orders')
+            ->join('customers', 'orders.customer_id', '=', 'customers.id')
+            ->select([
+                'customers.id',
+                'customers.name as customer_name',
+                'customers.email',
+                DB::raw('SUM(orders.total_amount) as total_spent'),
+                DB::raw('COUNT(orders.id) as total_orders'),
+                DB::raw('AVG(orders.total_amount) as average_order_value'),
+                DB::raw('MAX(orders.created_at) as last_order_date')
+            ])
+            ->where('orders.status', 'completed')
+            ->where('orders.deleted_at', null)
+            ->groupBy('customers.id', 'customers.name', 'customers.email')
+            ->orderBy('total_spent', 'desc');
     }
 }
 ```
@@ -396,6 +520,13 @@ $cacheLifetime = $service->getCacheLifetimeSeconds();
 - `getCreatorColumn()` - Column for creator tracking
 - `getUpdaterColumn()` - Column for updater tracking
 - `getDeleterColumn()` - Column for deleter tracking
+
+### Search Strategy Configuration
+- `shouldEnforceSearchStrategies()` - Enable/disable strategy enforcement
+- `getDefaultSearchStrategy()` - Default strategy when enforcement is enabled
+- `getSearchStrategyParam()` - URL parameter name for single search strategy
+- `getStrategiesParam()` - URL parameter name for multiple search strategies
+- `shouldAllowMultipleSearchStrategies()` - Allow multiple strategies execution
 
 ### Advanced Features
 - `getSelectColumns()` - Specific columns to select

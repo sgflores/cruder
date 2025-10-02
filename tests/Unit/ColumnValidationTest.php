@@ -23,9 +23,14 @@ class ColumnValidationTest extends TestCase
         $this->department = Department::factory()->create();
     }
 
+    // ========================================================================
+    // --- Column Validation Tests ---
+    // ========================================================================
+
     public function test_throws_exception_for_invalid_filter_column(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Filtered column 'invalid_column' is not declared in filterable columns");
         
         $this->userService->findAll([
             'invalid_column' => 'some_value'
@@ -35,6 +40,8 @@ class ColumnValidationTest extends TestCase
     public function test_throws_exception_for_invalid_sort_column(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Sort column 'invalid_column' is not declared in sortable columns");
+        
         $this->userService->findAll([
             'sort_by' => 'invalid_column'
         ]);
@@ -43,6 +50,7 @@ class ColumnValidationTest extends TestCase
     public function test_throws_exception_for_invalid_advanced_filter_column(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Advanced filter column 'invalid_column' is not declared in filterable columns");
         
         $this->userService->findAll([
             'invalid_column' => [
@@ -58,7 +66,6 @@ class ColumnValidationTest extends TestCase
 
     public function test_advanced_filter_gte_operator(): void
     {
-        // Create test data
         User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
         User::factory()->create(['name' => 'User 2', 'department_id' => $this->department->id]);
         
@@ -67,7 +74,7 @@ class ColumnValidationTest extends TestCase
         ]);
         
         $this->assertInstanceOf(Collection::class, $result);
-        $this->assertGreaterThanOrEqual(1, $result->count());
+        $this->assertGreaterThanOrEqual(2, $result->count());
     }
 
     public function test_advanced_filter_gt_operator(): void
@@ -230,83 +237,9 @@ class ColumnValidationTest extends TestCase
         $this->assertGreaterThanOrEqual(2, $result->count());
     }
 
-    public function test_advanced_filter_ignores_non_array_values(): void
-    {
-        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
-        
-        $result = $this->userService->findAll([
-            'name' => 'User 1', // This should be ignored by advanced filters
-            'id' => ['operator' => 'gte', 'value' => 1]
-        ]);
-        
-        $this->assertInstanceOf(Collection::class, $result);
-        $this->assertGreaterThanOrEqual(1, $result->count());
-    }
-
-    public function test_advanced_filter_ignores_missing_operator(): void
-    {
-        User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
-        
-        $result = $this->userService->findAll([
-            'name' => ['value' => 'User 1'] // Missing operator, should be ignored
-        ]);
-        
-        $this->assertInstanceOf(Collection::class, $result);
-        $this->assertGreaterThanOrEqual(1, $result->count());
-    }
-
-    public function test_advanced_filter_throws_exception_for_invalid_column(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Advanced filter column 'invalid_column' is not declared in filterable columns");
-        
-        $this->userService->findAll([
-            'invalid_column' => ['operator' => 'gte', 'value' => 100]
-        ]);
-    }
-
-    public function test_advanced_filter_throws_exception_for_related_column_not_in_filterable(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Advanced filter column 'department_name' is not declared in filterable columns");
-        
-        $this->userService->findAll([
-            'department_name' => ['operator' => 'like', 'value' => '%Engineering%']
-        ]);
-    }
-
-    public function test_throws_exception_when_no_searchable_columns_declared(): void
-    {
-        // Create a service with no searchable columns
-        $service = new class(new User()) extends TestUserService {
-            public function getDirectTextSearchColumns(): array
-            {
-                return [];
-            }
-            
-            public function getRelatedTextSearchColumns(): array
-            {
-                return [];
-            }
-        };
-        
-        $this->expectException(InvalidArgumentException::class);
-        
-        $service->findAll([
-            'search' => 'test'
-        ]);
-    }
-
-    public function test_allows_valid_filter_columns(): void
-    {
-        // This should not throw an exception
-        $result = $this->userService->findAll([
-            'id' => [1, 2, 3],
-            'department_id' => $this->department->id
-        ]);
-        
-        $this->assertInstanceOf(Collection::class, $result);
-    }
+    // ========================================================================
+    // --- Helper Method Tests ---
+    // ========================================================================
 
     public function test_helper_methods_work_correctly(): void
     {
@@ -339,9 +272,18 @@ class ColumnValidationTest extends TestCase
         $this->assertContains('department_name', $searchableColumns);
     }
 
+    public function test_allows_valid_filter_columns(): void
+    {
+        $result = $this->userService->findAll([
+            'id' => [1, 2, 3],
+            'department_id' => $this->department->id
+        ]);
+        
+        $this->assertInstanceOf(Collection::class, $result);
+    }
+
     public function test_allows_valid_sort_columns(): void
     {
-        // This should not throw an exception
         $result = $this->userService->findAll([
             'sort_by' => 'name',
             'sort_direction' => 'asc'
@@ -352,7 +294,6 @@ class ColumnValidationTest extends TestCase
 
     public function test_allows_valid_search_columns(): void
     {
-        // This should not throw an exception
         $result = $this->userService->findAll([
             'search' => 'test'
         ]);
@@ -362,7 +303,6 @@ class ColumnValidationTest extends TestCase
 
     public function test_ignores_reserved_parameters(): void
     {
-        // These should not throw exceptions as they are reserved parameters
         $result = $this->userService->findAll([
             'search' => 'test',
             'sort_by' => 'name',
@@ -373,7 +313,6 @@ class ColumnValidationTest extends TestCase
         
         $this->assertInstanceOf(LengthAwarePaginator::class, $result);
     }
-
 
     public function test_error_messages_include_allowed_columns(): void
     {

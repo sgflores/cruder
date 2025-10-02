@@ -11,12 +11,12 @@ A powerful, feature-rich CRUD service package for Laravel applications built on 
 - **Complete CRUD Operations** - Create, Read, Update, Delete with full validation
 - **Bulk Operations** - Efficient bulk create, update, and delete operations
 - **Advanced Filtering & Search** - Column-based filtering, sorting, and text search
+- **Search Strategy System** - Pluggable search strategies with strategy enforcement for reporting and analytics
 - **Export Functionality** - CSV, JSON, and custom export formats
 - **Query Caching** - Built-in query caching with configurable lifetime
 - **Performance Monitoring** - Query logging and slow query detection
 - **Column Validation** - Secure column validation for all operations
 - **Event System** - Extensible event system for custom business logic
-- **Strategy Pattern** - Pluggable strategies for search, export, and validation
 - **Trait-Based Configuration** - Type-safe, IDE-friendly configuration system
 - **Audit Trail** - Automatic tracking of record changes (created_by, updated_by, deleted_by)
 
@@ -133,31 +133,43 @@ $csvData = $userService->export('csv', [], ['name', 'email']);
 $jsonData = $userService->export('json', [], ['name', 'email']);
 ```
 
+### 3. Search Strategies & Strategy Enforcement
+
+Create custom search implementations for complex reporting and analytics with strategy enforcement for specialized services.
+
+**Key Features:**
+- **Custom Search Strategies** - Pluggable strategies using DB::table() or Eloquent Builder for complex queries
+- **Strategy Enforcement** - Bypass default search, use only registered strategies
+- **Multiple Strategy Support** - Run multiple strategies with AND logic
+- **Query Type Flexibility** - Support both Eloquent Builder and QueryBuilder
+
+**Configuration:** See [CONFIGURATION.md](CONFIGURATION.md) for detailed methods.
+
+**Complete Example:** See [Examples/SalesReportService.php](Examples/SalesReportService.php) for full implementation.
+
 ## 📚 Documentation
 
 - **[CONFIGURATION.md](CONFIGURATION.md)** - Complete configuration methods reference and examples
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Package architecture, design patterns, and request lifecycle
-- **[Examples/](Examples/)** - Real-world examples and usage patterns
+- **[Examples/README.md](Examples/README.md)** - Comprehensive examples documentation and usage patterns
+- **[Tests/README.md](tests/README.md)** - Testing documentation and examples
 
 ### 📖 Available Examples
-- **[SimpleSalesExample.php](Examples/SimpleSalesExample.php)** - Basic CRUD operations with sales system
+
+**Quick Reference:**
+- **[SimpleSalesExample.php](Examples/SimpleSalesExample.php)** - Basic CRUD operations
 - **[SalesInventoryExample.php](Examples/SalesInventoryExample.php)** - Advanced inventory management
-- **[ReportExample.php](Examples/ReportExample.php)** - Custom search strategies for reporting
+- **[SalesReportService.php](Examples/SalesReportService.php)** - Strategy enforcement & custom search strategies
 - **[ProductExample.php](Examples/ProductExample.php)** - Custom validation strategies
 - **[ExportExample.php](Examples/ExportExample.php)** - Data export functionality
 
+See [Examples/README.md](Examples/README.md) for comprehensive documentation.
+
 ## 🧪 Testing
 
-Run the test suite:
-
 ```bash
-composer test
-```
-
-Run with coverage:
-
-```bash
-composer test-coverage
+composer test              # Run test suite
+composer test-coverage     # Run with coverage
 ```
 
 ## 🤝 Contributing
@@ -181,34 +193,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Built with ❤️ for the Laravel community using:
 
-### Core Technologies
-- **[Laravel Framework](https://laravel.com/)** - The foundation that makes this package possible
-- **[Laravel Eloquent ORM](https://laravel.com/docs/eloquent)** - Database abstraction and model relationships
-- **[Laravel Query Builder](https://laravel.com/docs/queries)** - Fluent query building interface
-- **[Laravel Validation](https://laravel.com/docs/validation)** - Input validation system
-
-### Design Patterns & Principles
+- **[Laravel Framework](https://laravel.com/)** - Foundation and ORM
+- **[Laravel Query Builder](https://laravel.com/docs/queries)** - Fluent query building
+- **[Laravel Validation](https://laravel.com/docs/validation)** - Input validation
 - **SOLID Principles** - Clean architecture foundation
-- **Strategy Pattern** - Interchangeable algorithms implementation
-- **Observer Pattern** - Event-driven architecture
-- **Factory Pattern** - Object creation abstraction
-- **Template Method Pattern** - Operation skeleton definition
-
-### Inspiration & References
-
-- **[Laravel Generator](https://github.com/InfyOmLabs/laravel-generator)** - CRUD generator for Laravel
-- **[Grocery CRUD](https://www.grocerycrud.com/)** - PHP CRUD library for CodeIgniter
-- **[Craftable](https://github.com/BRACKETS-by-TRIAD/craftable)** - Laravel admin panel toolkit
-- **[Scaffold Interface](https://github.com/amranidev/scaffold-interface)** - Laravel CRUD generator
-- **[Spatie Laravel-Query-Builder](https://github.com/spatie/laravel-query-builder)** - Query building package
-
-### Open Source Community
-- **Laravel Community** - For continuous innovation and best practices
-- **PHP Community** - For language improvements and ecosystem growth
-- **Open Source Contributors** - For inspiring better software development
-- **Laravel Package Developers** - For setting high standards in package development
-
-### Testing & Quality
+- **Strategy Pattern** - Interchangeable algorithms
 - **[PHPUnit](https://phpunit.de/)** - Unit testing framework
 - **[Orchestra Testbench](https://github.com/orchestral/testbench)** - Laravel package testing
-- **[Mockery](https://github.com/mockery/mockery)** - Mock object framework

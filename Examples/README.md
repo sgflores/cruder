@@ -30,18 +30,20 @@ A comprehensive example of a complete sales and inventory management system.
 
 **File:** [SalesInventoryExample.php](SalesInventoryExample.php)
 
-### 3. **ReportExample.php** - Custom Search Strategy
-Demonstrates how to create custom search strategies for complex reporting and business intelligence.
+### 3. **SalesReportService.php** - Strategy Enforcement & Custom Search Strategies
+Demonstrates how to create a reporting service with strategy enforcement and custom search strategies using DB::table() for complex business intelligence.
 
 **What it demonstrates:**
-- Custom search strategy implementation
-- Sales reporting with advanced queries
-- Customer analytics and insights
-- Product performance analysis
-- Monthly sales trends
-- Top customers and low-performing products
+- Strategy enforcement for reporting services
+- Custom search strategies using DB::table()
+- Top customers analysis with revenue metrics
+- Top products analysis with sales performance
+- Sales data by date range with detailed analytics
+- Export functionality with custom strategies
+- Advanced filtering and pagination
+- Real-world reporting scenarios
 
-**File:** [ReportExample.php](ReportExample.php)
+**File:** [SalesReportService.php](SalesReportService.php)
 
 ### 4. **ProductExample.php** - Custom Validation Strategy
 Shows how to implement custom validation strategies and array-based validation rules.
@@ -89,6 +91,12 @@ Using the built-in event system to handle complex relationships and business log
 ### 6. **Bulk Operations**
 Efficient bulk create, update, and delete operations for handling large datasets.
 
+### 7. **Strategy Enforcement**
+Specialized reporting services that bypass default search implementation and use only specific strategies for analytics and business intelligence.
+
+### 8. **Custom Search Strategies**
+Pluggable search strategies using DB::table() for complex reporting queries and data analysis.
+
 ## 🔧 Advanced Features
 
 ### 1. **Column Validation**
@@ -110,6 +118,40 @@ Real-time inventory tracking with low stock alerts and automatic restocking.
 
 ### 3. **Customer Management**
 Customer registration with profile creation and order history tracking.
+
+### 4. **Sales Analytics & Reporting**
+Advanced reporting with custom search strategies for business intelligence and data analysis.
+
+## 📈 SalesReportService Methods
+
+The `SalesReportService` provides three main reporting methods:
+
+### 1. **getTopCustomers(int $limit = 10)**
+Returns top customers by total sales amount with metrics:
+- Customer name and email
+- Total amount spent
+- Total number of orders
+- Average order value
+- Last order date
+
+### 2. **getTopProducts(int $limit = 10)**
+Returns top products by sales quantity with metrics:
+- Product name and SKU
+- Total quantity sold
+- Total revenue generated
+- Number of orders
+- Average quantity per order
+
+### 3. **getSalesByDate(string $startDate, string $endDate)**
+Returns sales data within a date range with details:
+- Order information
+- Customer details
+- Sales amounts
+- Date breakdowns (daily, monthly, yearly)
+
+### Additional Methods:
+- **getSalesSummary()** - Paginated sales summary
+- **exportSalesData()** - Export functionality with custom strategies
 
 ## 🎯 Best Practices
 
@@ -133,6 +175,13 @@ Customer registration with profile creation and order history tracking.
 - Validate input data
 - Use database transactions for complex operations
 
+### 5. **Reporting Services**
+- Enable strategy enforcement for specialized reporting
+- Use DB::table() for complex analytical queries
+- Create focused methods for specific business metrics
+- Implement proper error handling for reporting failures
+- Use pagination for large result sets
+
 ## 🔍 Troubleshooting
 
 ### Common Issues
@@ -148,6 +197,18 @@ Customer registration with profile creation and order history tracking.
 
 3. **Performance Issues**
    **Solution:** Enable caching, use pagination, or implement chunked processing.
+
+4. **Strategy Enforcement Not Working**
+   ```
+   Strategy enforcement is enabled but default search is still being used
+   ```
+   **Solution:** Ensure `shouldEnforceSearchStrategies()` returns `true` and strategies are properly registered.
+
+5. **Custom Strategy Not Found**
+   ```
+   InvalidArgumentException: Search strategy 'custom_strategy' not found
+   ```
+   **Solution:** Register the strategy using `getSearchService()->addStrategy()` before using it.
 
 ## 📚 Additional Resources
 
