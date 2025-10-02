@@ -103,7 +103,7 @@ class SimpleSalesExample
 
         // 3. Pagination
         $paginatedResults = $this->productService->findAll([
-            'page' => 5, // 5 items per page
+            'paginate' => 5, // 5 items per page
             'status' => 'active'
         ]);
 

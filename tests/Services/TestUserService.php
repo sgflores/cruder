@@ -5,6 +5,7 @@ namespace SgFlores\Cruder\Tests\Services;
 use SgFlores\Cruder\BaseCrudService;
 use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
 use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
+use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 use SgFlores\Cruder\Tests\Models\User;
 
 class TestUserService extends BaseCrudService

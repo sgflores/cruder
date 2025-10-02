@@ -41,6 +41,12 @@ The CRUDer package is a comprehensive Laravel package that provides a robust, ex
 - `ValidationStrategyInterface` - Different validation approaches (array rules, custom logic)
 - `ExportStrategyInterface` - Different export formats (CSV, JSON, XML)
 
+**Strategy Enforcement**:
+- **Purpose**: Force specific search strategies for specialized reporting services
+- **Implementation**: `shouldEnforceSearchStrategies()` method bypasses default search
+- **Use Cases**: Analytics services, reporting services, business intelligence
+- **Benefits**: Complete control over query execution, complex aggregations, custom business logic
+
 ### 2. Template Method Pattern
 **Purpose**: Defines the skeleton of operations while allowing subclasses to override specific steps.
 
@@ -120,6 +126,8 @@ public function getDirectFilterableColumns(): array
 - Register search strategies
 - Apply search logic to query builders
 - Handle different search types (LIKE, full-text, custom)
+- Support strategy enforcement for specialized services
+- Manage multiple strategy execution with AND/OR logic
 
 #### ValidationService
 **Purpose**: Manages validation strategies for data integrity.
@@ -160,15 +168,36 @@ Constructor Call
 ```
 findAll() Request
 ├── 1. Column Validation
-├── 2. Query Builder Creation
-├── 3. Search Strategy Application
-├── 4. Filter Application
-├── 5. Sorting Application
-├── 6. Pagination Application
-├── 7. Query Execution with Caching
-├── 8. Relationship Loading
-├── 9. Response Transformation
-└── 10. Return Results
+├── 2. Strategy Enforcement Check
+│   ├── If enabled: Execute only registered strategies
+│   └── If disabled: Continue with default flow
+├── 3. Query Builder Creation
+├── 4. Search Strategy Application
+├── 5. Filter Application
+├── 6. Sorting Application
+├── 7. Pagination Application
+├── 8. Query Execution with Caching
+├── 9. Relationship Loading
+├── 10. Response Transformation
+└── 11. Return Results
+```
+
+### 2.1. Strategy Enforcement Lifecycle
+```
+Strategy-Enforced findAll() Request
+├── 1. Check shouldEnforceSearchStrategies()
+├── 2. Resolve strategies to execute
+│   ├── From filters['searchStrategy'] parameter
+│   ├── Or use getDefaultSearchStrategy()
+│   └── Or use first registered strategy
+├── 3. Execute strategies sequentially
+│   ├── Apply each strategy to query builder
+│   ├── Combine with AND/OR logic
+│   └── Maintain query type consistency
+├── 4. Apply additional filters (non-strategy)
+├── 5. Apply sorting and pagination
+├── 6. Execute final query
+└── 7. Return results
 ```
 
 ### 3. Create Operations Lifecycle

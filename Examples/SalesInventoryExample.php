@@ -297,7 +297,7 @@ class SalesInventoryExample
 
         // 4. Paginated results
         $paginatedResults = $this->productReaderService->findAll([
-            'page' => 10, // 10 items per page
+            'paginate' => 10, // 10 items per page
             'status' => 'active',
             'sort_by' => 'created_at',
             'sort_direction' => 'desc'

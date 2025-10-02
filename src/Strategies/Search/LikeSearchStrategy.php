@@ -2,7 +2,10 @@
 
 namespace SgFlores\Cruder\Strategies\Search;
 
+use InvalidArgumentException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * LIKE search strategy implementation.
@@ -14,15 +17,30 @@ use Illuminate\Database\Eloquent\Builder;
 class LikeSearchStrategy implements SearchStrategyInterface
 {
     /**
+     * Gets the strategy key.
+     * 
+     * @return string
+     */
+    public static function key(): string
+    {
+        return 'like';
+    }
+
+    /**
      * Applies LIKE search to the query.
      * 
-     * @param Builder $query The Eloquent query builder instance
+     * @param Builder|QueryBuilder|null $query The query builder instance
      * @param array $filters Array of query options
      * @param array $config Optional search configuration
-     * @return Builder The modified query builder
+     * @return Builder|QueryBuilder The modified query builder
      */
-    public function search(Builder $query, array $filters, array $config = []): Builder
+    public function search(Builder|QueryBuilder|null $query, array $filters, array $config = []): Builder|QueryBuilder
     {
+        // LikeSearchStrategy only works with Eloquent builders
+        if ($query === null || !($query instanceof Builder)) {
+            throw new InvalidArgumentException('LikeSearchStrategy requires an Eloquent Builder instance');
+        }
+
         $term = $config['term'] ?? '';
         
         // Ensure term is a string

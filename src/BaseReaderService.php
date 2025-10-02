@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Validator;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\QueryLogger;
@@ -20,6 +21,7 @@ use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator as Paginator;
 use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 
 /**
@@ -198,8 +200,9 @@ abstract class BaseReaderService implements ReaderConfigurable
      */
     protected function configureDefaultStrategies(): void
     {
-        // Add default search strategy
-        $this->searchService->addStrategy('like', new LikeSearchStrategy());
+        // Add default search strategy using its static key
+        $likeStrategy = new LikeSearchStrategy();
+        $this->searchService->addStrategy($likeStrategy::key(), $likeStrategy);
     }
 
     /**
@@ -233,13 +236,25 @@ abstract class BaseReaderService implements ReaderConfigurable
      * - Eager loading of relations
      * - Query result caching
      * - Performance monitoring
+     * - Custom search strategies
      * 
      * @param array $filters Query options including paginate, limit, search, sort_by, sort_direction, and column filters
      * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
+     * @param string|null $searchStrategy Optional search strategy to use for filtering
      * @return Collection|LengthAwarePaginator Collection of models or paginated results
      */
-    public function findAll(array $filters = [], $withRelations = null): Collection|LengthAwarePaginator
+    public function findAll(array $filters = [], $withRelations = null, ?string $searchStrategy = null): Collection|LengthAwarePaginator
     {
+        // Add search strategy to filters if provided
+        if ($searchStrategy !== null) {
+            $filters[$this->getSearchStrategyParam()] = $searchStrategy;
+        }
+        
+        // If strategy enforcement is enabled, bypass default implementation and use strategy only
+        if ($this->shouldEnforceSearchStrategies()) {
+            return $this->executeStrategyOnly($filters, $withRelations);
+        }
+
         // Fire before_find event for hooks
         $this->eventService->fire('before_find', $filters);
         
@@ -348,6 +363,288 @@ abstract class BaseReaderService implements ReaderConfigurable
         ]);
         
         return $count;
+    }
+
+    /**
+     * Executes only the specified search strategy or strategies, bypassing all default reader logic.
+     *
+     * This method is intended for use when strategy enforcement is enabled. It will:
+     * - Use the specified search strategy/strategies, or fall back to the default if none are specified.
+     * - Allow each strategy to initialize its own query builder (including Eloquent or raw DB queries).
+     * - Execute the strategy/strategies and return the result directly.
+     * - With pagination and limit if specified
+     *
+     * @param array $filters Query options and parameters to pass to the strategy/strategies.
+     * @param mixed $withRelations Relations to eager load (if applicable to the strategy).
+     * @return \Illuminate\Support\Collection|\Illuminate\Contracts\Pagination\LengthAwarePaginator
+     *         The result returned by the executed strategy/strategies.
+     * @throws \InvalidArgumentException If no strategy is specified or found.
+     */
+    protected function executeStrategyOnly(array $filters, $withRelations = null): Collection|LengthAwarePaginator
+    {
+        // Determine which strategies to use (enforce default in strategy enforcement mode)
+        $strategies = $this->resolveStrategiesToExecute($filters, true);
+        
+        if (empty($strategies)) {
+            $availableStrategies = $this->searchService->getAvailableStrategies();
+            throw new InvalidArgumentException(
+                'No search strategy specified and no default strategy configured. ' .
+                'Available strategies: ' . implode(', ', $availableStrategies)
+            );
+        }
+        
+        // Fire before_find event for hooks
+        $this->eventService->fire('before_find', $filters);
+        
+        // Execute strategies with null query (allows strategies to initialize their own builders)
+        $result = $this->executeMultipleStrategies(null, $filters, $strategies);
+        
+        // Execute the query to get the actual result
+        if ($result instanceof Builder) {
+            // Apply relations if needed for Eloquent builders
+            if ($withRelations !== false) {
+                $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getCollectionRelations());
+                if (!empty($relationsToLoad)) {
+                    $result->with($relationsToLoad);
+                }
+            }
+            
+            // Handle pagination for Eloquent builders
+            if (isset($filters[$this->getPaginateParam()]) && !is_array($filters[$this->getPaginateParam()])) {
+                $perPage = (int) $filters[$this->getPaginateParam()];
+                if ($perPage <= 0) {
+                    throw new InvalidArgumentException("Pagination parameter must be a positive integer, got: {$perPage}");
+                }
+                $finalResult = $result->paginate($perPage);
+            } elseif (isset($filters[$this->getLimitParam()]) && !is_array($filters[$this->getLimitParam()])) {
+                $limit = (int) $filters[$this->getLimitParam()];
+                if ($limit <= 0) {
+                    throw new InvalidArgumentException("Limit parameter must be a positive integer, got: {$limit}");
+                }
+                $finalResult = $result->limit($limit)->get();
+            } else {
+                $finalResult = $result->get();
+            }
+        } elseif ($result instanceof QueryBuilder) {
+            // Handle pagination for QueryBuilder
+            if (isset($filters[$this->getPaginateParam()]) && !is_array($filters[$this->getPaginateParam()])) {
+                // QueryBuilder doesn't support pagination directly, so we need to implement manual pagination
+                $perPage = (int) $filters[$this->getPaginateParam()];
+                if ($perPage <= 0) {
+                    throw new InvalidArgumentException("Pagination parameter must be a positive integer, got: {$perPage}");
+                }
+                $page = (int) ($filters['page'] ?? 1);
+                if ($page <= 0) {
+                    throw new InvalidArgumentException("Page parameter must be a positive integer, got: {$page}");
+                }
+                $offset = ($page - 1) * $perPage;
+                
+                // Get total count
+                $totalCount = $result->count();
+                
+                // Get paginated results
+                $items = $result->offset($offset)->limit($perPage)->get();
+                
+                // Create a simple paginator-like object
+                $finalResult = new Paginator(
+                    $items,
+                    $totalCount,
+                    $perPage,
+                    $page,
+                    ['path' => request()->url() ?? url()->current(), 'pageName' => 'page']
+                );
+            } elseif (isset($filters[$this->getLimitParam()]) && !is_array($filters[$this->getLimitParam()])) {
+                $limit = (int) $filters[$this->getLimitParam()];
+                if ($limit <= 0) {
+                    throw new InvalidArgumentException("Limit parameter must be a positive integer, got: {$limit}");
+                }
+                $finalResult = collect($result->limit($limit)->get());
+            } else {
+                $finalResult = collect($result->get());
+            }
+        }
+        
+        // Fire after_find event for hooks
+        $this->eventService->fire('after_find', $finalResult);
+        
+        return $finalResult;
+    }
+
+    /**
+     * Resolves which strategies to execute based on filters and configuration.
+     * 
+     * @param array $filters Query options
+     * @param bool $enforceDefault Whether to enforce default strategy when none specified
+     * @return array Array of strategy names to execute
+     * @throws InvalidArgumentException If invalid strategies are specified
+     */
+    protected function resolveStrategiesToExecute(array $filters, bool $enforceDefault = false): array
+    {
+        $strategies = [];
+        
+        // Check if multiple strategies are specified
+        if ($this->shouldAllowMultipleSearchStrategies() && isset($filters[$this->getStrategiesParam()])) {
+            $strategyString = $filters[$this->getStrategiesParam()];
+            
+            if (is_string($strategyString)) {
+                $strategies = array_filter(array_map('trim', explode(',', $strategyString)), fn($s) => !empty($s));
+            } elseif (is_array($strategyString)) {
+                $strategies = array_filter($strategyString, fn($s) => !empty($s));
+            }
+        }
+        
+        // If no multiple strategies specified, use single strategy
+        if (empty($strategies)) {
+            $singleStrategy = $filters[$this->getSearchStrategyParam()] ?? null;
+            
+            // Only use default strategy if enforceDefault is true or in strategy enforcement mode
+            if ($singleStrategy || ($enforceDefault && $this->getDefaultSearchStrategy())) {
+                $strategyToUse = $singleStrategy ?: $this->getDefaultSearchStrategy();
+                if (!empty($strategyToUse)) {
+                    $strategies = [$strategyToUse];
+                }
+            }
+        }
+        
+        // Validate all strategies exist
+        foreach ($strategies as $strategyName) {
+            if (!$this->searchService->hasStrategy($strategyName)) {
+                $availableStrategies = $this->searchService->getAvailableStrategies();
+                throw new InvalidArgumentException(
+                    "Search strategy '{$strategyName}' not found. " .
+                    "Available strategies: " . implode(', ', $availableStrategies)
+                );
+            }
+        }
+        
+        return $strategies;
+    }
+    
+    /**
+     * Executes multiple strategies on the query.
+     * 
+     * @param Builder|QueryBuilder|null $query The query builder (null allows strategies to initialize their own)
+     * @param array $filters Query options
+     * @param array $strategies Array of strategy names to execute
+     * @return Builder|QueryBuilder The modified query builder
+     * @throws InvalidArgumentException If strategy execution fails
+     */
+    protected function executeMultipleStrategies(Builder|QueryBuilder|null $query, array $filters, array $strategies): Builder|QueryBuilder
+    {
+        if (count($strategies) === 1) {
+            // Single strategy - execute directly (allows strategy to initialize its own query)
+            return $this->executeStrategyWithErrorHandling($strategies[0], $query, $filters, [
+                'term' => $filters[$this->getSearchParam()] ?? '',
+                'direct_columns' => $this->getDirectTextSearchColumns(),
+                'related_columns' => $this->getRelatedTextSearchColumns(),
+                'table' => $this->model->getTable(),
+                'type' => $strategies[0],
+            ]);
+        }
+        
+        // Multiple strategies - apply each strategy sequentially (AND logic)
+        $queryType = null;
+        foreach ($strategies as $strategyName) {
+            $query = $this->executeStrategyWithErrorHandling($strategyName, $query, $filters, [
+                'term' => $filters[$this->getSearchParam()] ?? '',
+                'direct_columns' => $this->getDirectTextSearchColumns(),
+                'related_columns' => $this->getRelatedTextSearchColumns(),
+                'table' => $this->model->getTable(),
+                'type' => $strategyName,
+            ]);
+            
+            // Ensure query type consistency
+            $query = $this->ensureQueryTypeConsistency($query, $queryType, $strategyName);
+            $queryType = $query instanceof Builder ? 'eloquent' : 'query';
+        }
+        
+        return $query;
+    }
+    
+    /**
+     * Executes a single strategy with comprehensive error handling.
+     * 
+     * @param string $strategyName The strategy name to execute
+     * @param Builder|QueryBuilder|null $query The query builder
+     * @param array $filters Query options
+     * @param array $config Strategy configuration
+     * @return Builder|QueryBuilder The modified query builder
+     * @throws InvalidArgumentException If strategy execution fails
+     */
+    protected function executeStrategyWithErrorHandling(string $strategyName, Builder|QueryBuilder|null $query, array $filters, array $config): Builder|QueryBuilder
+    {
+        try {
+            return $this->searchService->search($strategyName, $query, $filters, $config);
+        } catch (InvalidArgumentException $e) {
+            // Re-throw InvalidArgumentException as-is (these are expected)
+            throw $e;
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            Log::error("Strategy '{$strategyName}' execution failed", [
+                'strategy' => $strategyName,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'filters' => $filters,
+                'config' => $config,
+                'query_type' => $query ? get_class($query) : 'null',
+                'strategy_class' => $this->searchService->getStrategy($strategyName) ? 
+                    get_class($this->searchService->getStrategy($strategyName)) : 'Unknown',
+                'available_strategies' => $this->searchService->getAvailableStrategies()
+            ]);
+            
+            // Throw a more descriptive error
+            $strategyClass = $this->searchService->getStrategy($strategyName) ? 
+                get_class($this->searchService->getStrategy($strategyName)) : 'Unknown';
+            
+            throw new InvalidArgumentException(
+                "Strategy '{$strategyName}' execution failed: " . $e->getMessage() . 
+                " (Strategy class: {$strategyClass}, Available strategies: " . 
+                implode(', ', $this->searchService->getAvailableStrategies()) . ")",
+                0,
+                $e
+            );
+        }
+    }
+    
+    /**
+     * Ensures query type consistency across multiple strategies.
+     * 
+     * @param Builder|QueryBuilder $query The current query
+     * @param string|null $expectedType The expected query type ('eloquent' or 'query')
+     * @param string $strategyName The current strategy name
+     * @return Builder|QueryBuilder The consistent query
+     * @throws InvalidArgumentException If query types don't match
+     */
+    protected function ensureQueryTypeConsistency(Builder|QueryBuilder $query, ?string $expectedType, string $strategyName): Builder|QueryBuilder
+    {
+        if ($expectedType === null) {
+            // First strategy, no consistency check needed
+            return $query;
+        }
+        
+        $currentType = $query instanceof Builder ? 'eloquent' : 'query';
+        
+        if ($currentType !== $expectedType) {
+            // Log the type mismatch
+            Log::error("Invalid strategy query combination", [
+                'strategy' => $strategyName,
+                'expected_type' => $expectedType,
+                'actual_type' => $currentType,
+                'expected_class' => $expectedType === 'eloquent' ? Builder::class : QueryBuilder::class,
+                'actual_class' => get_class($query),
+                'query_sql' => method_exists($query, 'toSql') ? $query->toSql() : 'N/A',
+                'query_bindings' => method_exists($query, 'getBindings') ? $query->getBindings() : 'N/A'
+            ]);
+            
+            throw new InvalidArgumentException(
+                "Invalid strategy query combination: Strategy '{$strategyName}' returned {$currentType} query but {$expectedType} was expected. " .
+                "All strategies in a multiple strategy execution must return the same query type. " .
+                "Expected: " . ($expectedType === 'eloquent' ? Builder::class : QueryBuilder::class) . ", " .
+                "Got: " . get_class($query)
+            );
+        }
+        
+        return $query;
     }
 
     // ========================================================================
@@ -483,11 +780,10 @@ abstract class BaseReaderService implements ReaderConfigurable
     }
 
     /**
-     * Applies all declared search strategies.
+     * Applies specified search strategies from filters.
      * 
-     * This method loops through all available search strategies and applies them.
-     * For 'like' strategy, it validates searchable columns and passes configuration.
-     * For custom strategies, it calls them directly.
+     * This method applies only the strategies that are explicitly specified in the filters.
+     * It supports both single strategy and multiple strategies.
      * 
      * @param Builder $query The Eloquent query builder instance
      * @param array $filters Array of query options
@@ -496,42 +792,16 @@ abstract class BaseReaderService implements ReaderConfigurable
      */
     protected function applySearchStrategies(Builder $query, array $filters): void
     {
-        // Get all available search strategies
-        $availableStrategies = $this->searchService->getAvailableStrategies();
+        // Determine which strategies to execute
+        $strategies = $this->resolveStrategiesToExecute($filters);
         
-        foreach ($availableStrategies as $strategyName) {
-            if ($strategyName === 'like') {
-                // Validate that searchable columns are declared for like strategy
-                $searchableColumns = array_merge(
-                    $this->getDirectTextSearchColumns(),
-                    $this->getRelatedTextSearchColumns()
-                );
-                
-                if (empty($searchableColumns)) {
-                    throw new InvalidArgumentException(
-                        "No searchable columns are declared. " .
-                        "Please define DIRECT_TEXT_SEARCH_COLUMNS or RELATED_TEXT_SEARCH_COLUMNS to enable text search."
-                    );
-                }
-                
-                // Apply like strategy with configuration
-                $config = [
-                    'term' => $filters[$this->getSearchParam()] ?? '',
-                    'type' => 'like',
-                    'enabled' => true,
-                    'direct_columns' => $this->getDirectTextSearchColumns(),
-                    'related_columns' => $this->getRelatedTextSearchColumns()
-                ];
-
-                $this->searchService->search($query, $filters, $config);
-            } else {
-                // Apply custom strategy directly
-                $this->searchService->search($query, $filters, [
-                    'type' => $strategyName,
-                    'enabled' => true
-                ]);
-            }
+        if (empty($strategies)) {
+            // No strategies specified, nothing to do
+            return;
         }
+        
+        // Execute the specified strategies
+        $this->executeMultipleStrategies($query, $filters, $strategies);
     }
 
     /**
@@ -926,6 +1196,8 @@ abstract class BaseReaderService implements ReaderConfigurable
             $this->getSortDirectionParam(),
             $this->getPaginateParam(),
             $this->getLimitParam(),
+            $this->getSearchStrategyParam(),
+            $this->getStrategiesParam(),
             static::MAGIC_COUNT
         ]);
     }

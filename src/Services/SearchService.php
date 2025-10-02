@@ -2,7 +2,9 @@
 
 namespace SgFlores\Cruder\Services;
 
+use InvalidArgumentException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use SgFlores\Cruder\Strategies\Search\SearchStrategyInterface;
 
 /**
@@ -27,9 +29,17 @@ class SearchService
      * @param string $name The strategy name
      * @param SearchStrategyInterface $strategy The strategy implementation
      * @return void
+     * @throws InvalidArgumentException If strategy key doesn't match the provided name
      */
     public function addStrategy(string $name, SearchStrategyInterface $strategy): void
     {
+        // Validate that the strategy key matches the provided name
+        if ($strategy::key() !== $name) {
+            throw new InvalidArgumentException(
+                "Strategy key mismatch. Expected '{$name}', but strategy returns '{$strategy::key()}'"
+            );
+        }
+        
         $this->strategies[$name] = $strategy;
     }
 
@@ -39,20 +49,20 @@ class SearchService
      * Uses the configured search strategy to modify the query builder
      * with appropriate search conditions (LIKE, full-text, etc.).
      * 
-     * @param Builder $query The Eloquent query builder instance
+     * @param string $strategyName The strategy name to use
+     * @param Builder|QueryBuilder|null $query The query builder instance
      * @param array $filters Array of query options
      * @param array $config Search configuration
-     * @return Builder The modified query builder
+     * @return Builder|QueryBuilder The modified query builder
+     * @throws InvalidArgumentException If strategy not found
      */
-    public function search(Builder $query, array $filters, array $config = []): Builder
+    public function search(string $strategyName, Builder|QueryBuilder|null $query, array $filters, array $config = []): Builder|QueryBuilder
     {
-        // Get strategy name from config, default to 'like'
-        $strategyName = $config['type'] ?? 'like';
         $strategy = $this->strategies[$strategyName] ?? null;
         
         // Throw exception if strategy not found
         if (!$strategy) {
-            throw new \InvalidArgumentException("Search strategy '{$strategyName}' not found");
+            throw new InvalidArgumentException("Search strategy '{$strategyName}' not found");
         }
         
         // Delegate to the strategy to modify the query
@@ -78,5 +88,16 @@ class SearchService
     public function hasStrategy(string $name): bool
     {
         return isset($this->strategies[$name]);
+    }
+    
+    /**
+     * Gets a strategy instance by name.
+     * 
+     * @param string $name The strategy name
+     * @return SearchStrategyInterface|null The strategy instance or null if not found
+     */
+    public function getStrategy(string $name): ?SearchStrategyInterface
+    {
+        return $this->strategies[$name] ?? null;
     }
 }
