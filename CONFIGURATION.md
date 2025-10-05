@@ -177,25 +177,9 @@ public function getDeleterColumn(): string         // Default: 'deleted_by'
 ### Search Strategy Configuration
 
 ```php
-public function shouldEnforceSearchStrategies(): bool  // Default: false
-// Determines if the service should only use registered search strategies
-// When enabled, bypasses default search implementation completely
-
-public function getDefaultSearchStrategy(): ?string    // Default: null
-// Returns the default search strategy to use when strategy enforcement is enabled
-// If null, the first registered strategy will be used
-
-public function getSearchStrategyParam(): string       // Default: 'searchStrategy'
-// Returns the URL parameter name for specifying single search strategy
-// Used in filters: ['searchStrategy' => 'topCustomers']
-
 public function getStrategiesParam(): string           // Default: 'strategies'
-// Returns the URL parameter name for specifying multiple search strategies
-// Used in filters: ['strategies' => 'like,fulltext']
-
-public function shouldAllowMultipleSearchStrategies(): bool  // Default: false
-// Determines if multiple strategies can be executed simultaneously
-// When enabled, strategies are combined with AND logic
+// Returns the URL parameter name for specifying search strategies
+// Supports both array and comma-separated string: ['strategies' => 'like,fulltext'] or ['strategies' => ['like', 'fulltext']]
 ```
 
 ## Usage Examples
@@ -209,12 +193,17 @@ namespace App\Services;
 
 use App\Models\User;
 use SgFlores\Cruder\BaseCrudService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ValidationService;
 
 class UserService extends BaseCrudService
 {
-    public function __construct(User $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        User $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     // Override only the methods you need to customize
@@ -244,12 +233,17 @@ namespace App\Services;
 
 use App\Models\Product;
 use SgFlores\Cruder\BaseCrudService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ValidationService;
 
 class ProductService extends BaseCrudService
 {
-    public function __construct(Product $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Product $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     public function getDirectFilterableColumns(): array
@@ -302,7 +296,7 @@ class ProductService extends BaseCrudService
 }
 ```
 
-### Strategy Enforcement Service Implementation
+### Custom Search Strategy Service Implementation
 
 ```php
 <?php
@@ -311,6 +305,10 @@ namespace App\Services;
 
 use App\Models\Order;
 use SgFlores\Cruder\BaseReaderService;
+use SgFlores\Cruder\Services\SearchService;
+use SgFlores\Cruder\Services\ExportService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Strategies\Search\SearchStrategyInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -318,55 +316,39 @@ use Illuminate\Support\Facades\DB;
 
 class SalesReportService extends BaseReaderService
 {
-    public function __construct(Order $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Order $model,
+        SearchService $searchService,
+        ExportService $exportService,
+        EventService $eventService,
+        QueryLogger $queryLogger
+    ) {
+        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
         $this->setupCustomSearchStrategies();
-    }
-
-    // Enable strategy enforcement for reporting
-    public function shouldEnforceSearchStrategies(): bool
-    {
-        return true;
-    }
-
-    public function getDefaultSearchStrategy(): ?string
-    {
-        return 'topCustomers';
-    }
-
-    public function getSearchStrategyParam(): string
-    {
-        return 'searchStrategy';
-    }
-
-    public function shouldAllowMultipleSearchStrategies(): bool
-    {
-        return true;
     }
 
     protected function setupCustomSearchStrategies(): void
     {
-        $this->getSearchService()->addStrategy(TopCustomersStrategy::key(), new TopCustomersStrategy());
-        $this->getSearchService()->addStrategy(TopProductsStrategy::key(), new TopProductsStrategy());
-        $this->getSearchService()->addStrategy(SalesByDateStrategy::key(), new SalesByDateStrategy());
+        $this->searchService->addStrategy(TopCustomersStrategy::key(), new TopCustomersStrategy());
+        $this->searchService->addStrategy(TopProductsStrategy::key(), new TopProductsStrategy());
+        $this->searchService->addStrategy(SalesByDateStrategy::key(), new SalesByDateStrategy());
     }
 
     // Custom methods for each strategy
     public function getTopCustomers(int $limit = 10)
     {
-        return $this->findAll(['searchStrategy' => TopCustomersStrategy::key(), 'limit' => $limit]);
+        return $this->findAll(['strategies' => TopCustomersStrategy::key(), 'limit' => $limit]);
     }
 
     public function getTopProducts(int $limit = 10)
     {
-        return $this->findAll(['searchStrategy' => TopProductsStrategy::key(), 'limit' => $limit]);
+        return $this->findAll(['strategies' => TopProductsStrategy::key(), 'limit' => $limit]);
     }
 
     public function getSalesByDate(string $startDate, string $endDate)
     {
         return $this->findAll([
-            'searchStrategy' => SalesByDateStrategy::key(),
+            'strategies' => SalesByDateStrategy::key(),
             'start_date' => $startDate,
             'end_date' => $endDate
         ]);
@@ -522,11 +504,7 @@ $cacheLifetime = $service->getCacheLifetimeSeconds();
 - `getDeleterColumn()` - Column for deleter tracking
 
 ### Search Strategy Configuration
-- `shouldEnforceSearchStrategies()` - Enable/disable strategy enforcement
-- `getDefaultSearchStrategy()` - Default strategy when enforcement is enabled
-- `getSearchStrategyParam()` - URL parameter name for single search strategy
-- `getStrategiesParam()` - URL parameter name for multiple search strategies
-- `shouldAllowMultipleSearchStrategies()` - Allow multiple strategies execution
+- `getStrategiesParam()` - URL parameter name for search strategies (supports array or comma-separated string)
 
 ### Advanced Features
 - `getSelectColumns()` - Specific columns to select
@@ -538,3 +516,62 @@ $cacheLifetime = $service->getCacheLifetimeSeconds();
 - `shouldEnableChunkedProcessing()` - Enable chunked processing
 - `getChunkSize()` - Records per chunk
 - `getDatabaseConnection()` - Database connection name
+
+## Dependency Injection Patterns
+
+### BaseCrudService Constructor
+
+The `BaseCrudService` requires proper dependency injection for optimal functionality:
+
+```php
+public function __construct(
+    Model $model,
+    EventService $eventService,
+    ValidationService $validationService
+)
+```
+
+**Required Services:**
+- `Model $model` - The Eloquent model to operate on
+- `EventService $eventService` - Event handling service (optional)
+- `ValidationService $validationService` - Validation service (optional, defaults to new instance)
+
+### BaseReaderService Constructor
+
+The `BaseReaderService` optional services to but needs all services for full functionality:
+
+```php
+public function __construct(
+    Model $model,
+    ?SearchService $searchService = null,
+    ?ExportService $exportService = null,
+    ?EventService $eventService = null,
+    ?QueryLogger $queryLogger = null
+)
+```
+
+**Services:**
+- `Model $model` - The Eloquent model to operate on
+- `SearchService $searchService` - Search functionality (optional)
+- `ExportService $exportService` - Export functionality (optional)
+- `EventService $eventService` - Event handling (optional)
+- `QueryLogger $queryLogger` - Query logging (optional)
+
+### Service Validation
+
+Services validate their dependencies at runtime and provide clear error messages:
+
+```php
+// This will throw an InvalidArgumentException if SearchService is not injected
+$results = $service->findAll(['strategies' => 'custom_strategy']);
+
+// This will throw an InvalidArgumentException if ExportService is not injected
+$data = $service->export('csv', $data);
+```
+
+### Best Practices
+
+1. **Proper Type Hints**: Use proper type hints for better IDE support and type safety
+2 **Service Registration**: Call `configureServices()` after parent constructor for service setup
+3 **Strategy Pattern**: Use `Strategy::key()` method pattern for strategy registration
+4 **Event Constants**: Use EventService static constants (e.g., `EventService::BEFORE_CREATE`)

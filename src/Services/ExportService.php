@@ -24,13 +24,24 @@ class ExportService
     /**
      * Adds an export strategy.
      * 
-     * @param string $name The strategy name
+     * @param string $name The strategy name (optional, uses strategy's key() if not provided)
      * @param ExportStrategyInterface $strategy The strategy implementation
      * @return void
      */
     public function addStrategy(string $name, ExportStrategyInterface $strategy): void
     {
         $this->strategies[$name] = $strategy;
+    }
+
+    /**
+     * Adds an export strategy using its key() method.
+     * 
+     * @param ExportStrategyInterface $strategy The strategy implementation
+     * @return void
+     */
+    public function addStrategyByKey(ExportStrategyInterface $strategy): void
+    {
+        $this->strategies[$strategy::key()] = $strategy;
     }
 
     /**

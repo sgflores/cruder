@@ -4,6 +4,8 @@ namespace SgFlores\Cruder\Examples;
 
 use SgFlores\Cruder\BaseCrudService;
 use SgFlores\Cruder\BaseReaderService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ValidationService;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\Customer;
@@ -292,9 +294,12 @@ class SimpleSalesExample
  */
 class ProductService extends BaseCrudService
 {
-    public function __construct(Product $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Product $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     public function getDirectFilterableColumns(): array
@@ -334,9 +339,12 @@ class ProductService extends BaseCrudService
  */
 class OrderService extends BaseCrudService
 {
-    public function __construct(Order $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Order $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     public function getDirectFilterableColumns(): array
@@ -376,9 +384,12 @@ class OrderService extends BaseCrudService
  */
 class CustomerService extends BaseCrudService
 {
-    public function __construct(Customer $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Customer $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     public function getDirectFilterableColumns(): array

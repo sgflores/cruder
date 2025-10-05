@@ -312,48 +312,7 @@ trait ReaderConfigurationTrait
     // --- Search Strategy Methods ---
     // ========================================================================
     
-    /**
-     * Whether to enforce search strategies (bypass default search implementation).
-     * When true, only registered strategies will be used for search.
-     * 
-     * @return bool
-     */
-    public function shouldEnforceSearchStrategies(): bool
-    {
-        return false;
-    }
     
-    /**
-     * Default search strategy to use when enforceSearchStrategies is true.
-     * 
-     * @return string|null
-     */
-    public function getDefaultSearchStrategy(): ?string
-    {
-        return null;
-    }
-    
-    /**
-     * Whether to allow multiple search strategies to run simultaneously.
-     * 
-     * @return bool
-     */
-    public function shouldAllowMultipleSearchStrategies(): bool
-    {
-        return false;
-    }
-    
-    
-    /**
-     * Query parameter key for single search strategy.
-     * 
-     * @example 'searchStrategy' for ?searchStrategy=like
-     * @return string
-     */
-    public function getSearchStrategyParam(): string
-    {
-        return 'searchStrategy';
-    }
     
     /**
      * Query parameter key for multiple strategies.

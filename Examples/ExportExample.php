@@ -3,6 +3,10 @@
 namespace SgFlores\Cruder\Examples;
 
 use SgFlores\Cruder\BaseReaderService;
+use SgFlores\Cruder\Services\SearchService;
+use SgFlores\Cruder\Services\ExportService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Strategies\Export\ExportStrategyInterface;
 use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
 use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
@@ -24,10 +28,22 @@ class ExportExample extends BaseReaderService
      * ExportExample constructor.
      * 
      * @param Model $model The Eloquent model to export data from
+     * @param SearchService $searchService Search service
+     * @param ExportService $exportService Export service
+     * @param EventService $eventService Event service
+     * @param QueryLogger $queryLogger Query logger
      */
-    public function __construct(Model $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Model $model,
+        SearchService $searchService,
+        ExportService $exportService,
+        EventService $eventService,
+        QueryLogger $queryLogger
+    ) {
+        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
+        
+        // Configure services after construction
+        $this->configureServices();
     }
 
     /**
@@ -136,6 +152,11 @@ class ExportExample extends BaseReaderService
  */
 class XmlExportStrategy implements ExportStrategyInterface
 {
+    public static function key(): string
+    {
+        return 'xml';
+    }
+
     /**
      * Exports data to XML format.
      * 

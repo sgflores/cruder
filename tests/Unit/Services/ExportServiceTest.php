@@ -4,9 +4,11 @@ namespace SgFlores\Cruder\Tests\Unit\Services;
 
 use Illuminate\Support\Collection;
 use Mockery;
+use SgFlores\Cruder\BaseReaderService;
 use SgFlores\Cruder\Services\ExportService;
 use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
 use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
+use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\UnitTestCase;
 
 class ExportServiceTest extends UnitTestCase
@@ -37,6 +39,31 @@ class ExportServiceTest extends UnitTestCase
         $this->service->addStrategy('csv', $strategy);
         
         $this->assertTrue($this->service->hasFormat('csv'));
+    }
+
+    public function test_add_strategy_by_key(): void
+    {
+        $strategy = new CsvExportStrategy();
+        
+        $this->service->addStrategyByKey($strategy);
+        
+        $this->assertTrue($this->service->hasFormat('csv'));
+    }
+
+    public function test_add_strategy_by_key_uses_strategy_key(): void
+    {
+        $csvStrategy = new CsvExportStrategy();
+        $jsonStrategy = new JsonExportStrategy();
+        
+        $this->service->addStrategyByKey($csvStrategy);
+        $this->service->addStrategyByKey($jsonStrategy);
+        
+        $this->assertTrue($this->service->hasFormat('csv'));
+        $this->assertTrue($this->service->hasFormat('json'));
+        
+        $formats = $this->service->getAvailableFormats();
+        $this->assertContains('csv', $formats);
+        $this->assertContains('json', $formats);
     }
 
     public function test_export_with_existing_strategy(): void
@@ -222,5 +249,51 @@ class ExportServiceTest extends UnitTestCase
         $result = $this->service->export('csv', collect([]), []);
         
         $this->assertEquals('empty data exported', $result);
+    }
+
+    public function test_throws_error_when_calling_export_without_export_service()
+    {
+        // Create a service without ExportService
+        $serviceWithoutExport = new class(new User()) extends BaseReaderService {
+            public function __construct(User $user)
+            {
+                parent::__construct($user); // No ExportService provided
+            }
+
+            public function getDirectFilterableColumns(): array
+            {
+                return ['id', 'name', 'department_id'];
+            }
+
+            public function getDirectSortableColumns(): array
+            {
+                return ['id', 'name', 'department_id'];
+            }
+
+            public function getSingleRecordRelations(): array
+            {
+                return [];
+            }
+
+            public function getCollectionRelations(): array
+            {
+                return [];
+            }
+
+            public function getSearchParam(): string
+            {
+                return 'search';
+            }
+
+            public function getStrategiesParam(): string
+            {
+                return 'strategies';
+            }
+        };
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('ExportService is required for export functionality');
+
+        $serviceWithoutExport->export('csv', []);
     }
 }

@@ -16,6 +16,11 @@ class JsonExportStrategyTest extends UnitTestCase
         $this->strategy = new JsonExportStrategy();
     }
 
+    public function test_key_returns_json(): void
+    {
+        $this->assertEquals('json', JsonExportStrategy::key());
+    }
+
     public function test_export_empty_collection(): void
     {
         $data = collect([]);

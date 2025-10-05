@@ -2,27 +2,19 @@
 
 namespace SgFlores\Cruder;
 
-use InvalidArgumentException;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Validator;
 use SgFlores\Cruder\Services\ValidationService;
 use SgFlores\Cruder\Services\ValidationFactory;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\BaseReaderService;
 use SgFlores\Cruder\Contracts\CrudConfigurable;
-use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
 use SgFlores\Cruder\Traits\CrudConfigurationTrait;
 use SgFlores\Cruder\Traits\PerformanceMonitoringTrait;
 use SgFlores\Cruder\Exceptions\ValidationException as CruderValidationException;
 use SgFlores\Cruder\Strategies\Validation\ValidationStrategyInterface;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Base CRUD Service - Complete CRUD Operations Foundation
@@ -93,11 +85,17 @@ use Illuminate\Validation\ValidationException;
  * ## Usage Example
  * 
  * ```php
+ * use SgFlores\Cruder\Services\EventService;
+ * use SgFlores\Cruder\Services\ValidationService;
+ * 
  * class UserService extends BaseCrudService
  * {
- *     public function __construct(User $model)
- *     {
- *         parent::__construct($model);
+ *     public function __construct(
+ *         User $model,
+ *         EventService $eventService,
+ *         ValidationService $validationService
+ *     ) {
+ *         parent::__construct($model, $eventService, $validationService);
  *     }
  * 
  *     // Override configuration methods as needed
@@ -120,13 +118,13 @@ use Illuminate\Validation\ValidationException;
  * 
  * ## Event System
  * 
- * The service provides comprehensive event hooks for all CRUD operations:
- * - `before_create`, `after_create`
- * - `before_update`, `after_update`
- * - `before_delete`, `after_delete`
- * - `before_bulk_create`, `after_bulk_create`
- * - `before_bulk_update`, `after_bulk_update`
- * - `before_bulk_delete`, `after_bulk_delete`
+ * The service provides comprehensive event hooks for all CRUD operations using static constants:
+ * - `EventService::BEFORE_CREATE`, `EventService::AFTER_CREATE`
+ * - `EventService::BEFORE_UPDATE`, `EventService::AFTER_UPDATE`
+ * - `EventService::BEFORE_DELETE`, `EventService::AFTER_DELETE`
+ * - `EventService::BEFORE_BULK_CREATE`, `EventService::AFTER_BULK_CREATE`
+ * - `EventService::BEFORE_BULK_UPDATE`, `EventService::AFTER_BULK_UPDATE`
+ * - `EventService::BEFORE_BULK_DELETE`, `EventService::AFTER_BULK_DELETE`
  */
 abstract class BaseCrudService extends BaseReaderService implements CrudConfigurable
 {
@@ -138,29 +136,25 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
      * 
      * @var ValidationService
      */
-    protected $validationService;
-
-
-    /**
-     * Event service for managing events.
-     * 
-     * @var EventService
-     */
-    protected $eventService;
+    protected ValidationService $validationService;
 
     /**
      * Constructor - Initializes the CRUD Service
      * 
-     * Sets up the service with the provided model and initializes all required dependencies.
-     * The service automatically configures validation and event services for CRUD operations.
+     * Sets up the service with the provided model, event service, and validation service.
+     * The BaseCrudService focuses on CRUD operations and doesn't require reader services.
      * 
      * @param Model $model The Eloquent model instance this service will operate on
+     * @param EventService|null $eventService Optional event service instance
+     * @param ValidationService|null $validationService Optional validation service instance
      */
-    public function __construct(Model $model)
-    {
-        parent::__construct($model);
-        $this->validationService = new ValidationService();
-        $this->eventService = new EventService();
+    public function __construct(
+        Model $model,
+        ?EventService $eventService = null,
+        ?ValidationService $validationService = null
+    ) {
+        parent::__construct($model, null, null, $eventService);
+        $this->validationService = $validationService ?? new ValidationService();
     }
 
     // ========================================================================
@@ -187,7 +181,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
     public function create(array $data, $withRelations = null, $validationRules = null): Model
     {
         // Fire before_create event
-        $this->eventService->fire('before_create', $data);
+        if ($this->eventService) {
+            $this->eventService->fire(EventService::BEFORE_CREATE, $data);
+        }
         
         // This block handles the creation of a new record in an atomic (transactional) way,
         // with support for validation and eager loading of relations.
@@ -221,7 +217,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                 $result = $this->transformResponse($createdModel);
             
                 // 8. After creation, an event is fired for hooks or listeners.
-                $this->eventService->fire('after_create', $result);
+                if ($this->eventService) {
+                    $this->eventService->fire(EventService::AFTER_CREATE, $result);
+                }
                 
                 // 9. The final created (and possibly transformed) model is returned.
                 return $result;
@@ -261,7 +259,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
         }
 
         // Fire before_update event
-        $this->eventService->fire('before_update', $data);
+        if ($this->eventService) {
+            $this->eventService->fire(EventService::BEFORE_UPDATE, $data);
+        }
 
         return DB::transaction(function () use ($existingModel, $data, $id, $primaryKey, $withRelations, $validationRules) {
             return $this->executeWithTimingAndCache('update', function () use ($existingModel, $data, $id, $primaryKey, $withRelations, $validationRules) {
@@ -280,7 +280,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                 $result = $this->transformResponse($updatedModel);
                 
                 // Fire after_update event
-                $this->eventService->fire('after_update', $result);
+                if ($this->eventService) {
+                    $this->eventService->fire(EventService::AFTER_UPDATE, $result);
+                }
                 
                 return $result;
             }, [
@@ -316,7 +318,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
         }
         
         // Fire before_delete event
-        $this->eventService->fire('before_delete', $modelToDelete);
+        if ($this->eventService) {
+            $this->eventService->fire(EventService::BEFORE_DELETE, $modelToDelete);
+        }
         
         return DB::transaction(function () use ($modelToDelete, $force, $id) {
             return $this->executeWithTimingAndCache('delete', function () use ($modelToDelete, $force) {
@@ -327,7 +331,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                 
                 if ($deletionSuccessful) {
                     // Fire after_delete event
-                    $this->eventService->fire('after_delete', $modelToDelete);
+                    if ($this->eventService) {
+                        $this->eventService->fire(EventService::AFTER_DELETE, $modelToDelete);
+                    }
                 }
                         
                 return $deletionSuccessful;
@@ -353,7 +359,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
     public function bulkCreate(array $data, $validationRules = null): bool
     {
         // Fire before_bulk_create event
-        $this->eventService->fire('before_bulk_create', $data);
+        if ($this->eventService) {
+            $this->eventService->fire(EventService::BEFORE_BULK_CREATE, $data);
+        }
         
         return DB::transaction(function () use ($data, $validationRules) {
             return $this->executeWithTimingAndCache('bulk_create', function () use ($data, $validationRules) {
@@ -376,7 +384,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                 $success = $this->model->insert($data);
                 if ($success) {
                     // Fire after_bulk_create event
-                    $this->eventService->fire('after_bulk_create', $data);
+                    if ($this->eventService) {
+                        $this->eventService->fire(EventService::AFTER_BULK_CREATE, $data);
+                    }
                 }
                 return $success;
             }, [
@@ -404,8 +414,10 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
         }
 
         // Fire before_bulk_update events
-        $this->eventService->fire('before_bulk_update', $data);
-        $this->eventService->fire('before_bulk_update_filters', $filters);
+        if ($this->eventService) {
+            $this->eventService->fire(EventService::BEFORE_BULK_UPDATE, $data);
+            $this->eventService->fire(EventService::BEFORE_BULK_UPDATE_FILTERS, $filters);
+        }
 
         return DB::transaction(function () use ($filters, $data, $validationRules) {
             return $this->executeWithTimingAndCache('bulk_update', function () use ($filters, $data, $validationRules) {
@@ -422,11 +434,13 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                 $updatedCount = $query->update($processedData);
                 if ($updatedCount > 0) {
                     // Fire after_bulk_update event
-                    $this->eventService->fire('after_bulk_update', [
-                        'updated_count' => $updatedCount,
-                        'filters' => $filters,
-                        'data' => $processedData
-                    ]);
+                    if ($this->eventService) {
+                        $this->eventService->fire(EventService::AFTER_BULK_UPDATE, [
+                            'updated_count' => $updatedCount,
+                            'filters' => $filters,
+                            'data' => $processedData
+                        ]);
+                    }
                 }
                 return $updatedCount;
             }, [
@@ -454,8 +468,10 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
         }
 
         // Fire before_bulk_delete events
-        $this->eventService->fire('before_bulk_delete_filters', $filters);
-        $this->eventService->fire('before_bulk_delete', $force);
+        if ($this->eventService) {
+            $this->eventService->fire(EventService::BEFORE_BULK_DELETE_FILTERS, $filters);
+            $this->eventService->fire(EventService::BEFORE_BULK_DELETE, $force);
+        }
 
         return DB::transaction(function () use ($filters, $force) {
             return $this->executeWithTimingAndCache('bulk_delete', function () use ($filters, $force) {
@@ -477,11 +493,13 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
 
                 if ($deletedCount > 0) {
                     // Fire after_bulk_delete event
-                    $this->eventService->fire('after_bulk_delete', [
-                        'deleted_count' => $deletedCount,
-                        'filters' => $filters,
-                        'force' => $force
-                    ]);
+                    if ($this->eventService) {
+                        $this->eventService->fire(EventService::AFTER_BULK_DELETE, [
+                            'deleted_count' => $deletedCount,
+                            'filters' => $filters,
+                            'force' => $force
+                        ]);
+                    }
                 }
                 return $deletedCount;
             }, [
@@ -542,17 +560,6 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
     public function getValidationService(): ValidationService
     {
         return $this->validationService;
-    }
-
-
-    /**
-     * Gets the event service instance.
-     * 
-     * @return EventService The event service
-     */
-    public function getEventService(): EventService
-    {
-        return $this->eventService;
     }
 
     // ========================================================================
