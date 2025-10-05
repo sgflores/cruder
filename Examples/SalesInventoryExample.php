@@ -3,7 +3,6 @@
 namespace SgFlores\Cruder\Examples;
 
 use SgFlores\Cruder\BaseCrudService;
-use SgFlores\Cruder\BaseReaderService;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\ValidationService;
 use SgFlores\Cruder\Services\SearchService;
@@ -21,7 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Real-world example demonstrating BaseCrudService and BaseReaderService
+ * Real-world example demonstrating BaseCrudService
  * using a Sales and Inventory Management System.
  * 
  * This example shows:
@@ -35,32 +34,20 @@ use Illuminate\Support\Facades\Mail;
 class SalesInventoryExample
 {
     protected ProductCrudService $productService;
-    protected ProductReaderService $productReaderService;
     protected OrderCrudService $orderService;
-    protected OrderReaderService $orderReaderService;
     protected CustomerCrudService $customerService;
-    protected CustomerReaderService $customerReaderService;
     protected InventoryCrudService $inventoryService;
-    protected InventoryReaderService $inventoryReaderService;
 
     public function __construct(
         ProductCrudService $productService,
-        ProductReaderService $productReaderService,
         OrderCrudService $orderService,
-        OrderReaderService $orderReaderService,
         CustomerCrudService $customerService,
-        CustomerReaderService $customerReaderService,
-        InventoryCrudService $inventoryService,
-        InventoryReaderService $inventoryReaderService
+        InventoryCrudService $inventoryService
     ) {
         $this->productService = $productService;
-        $this->productReaderService = $productReaderService;
         $this->orderService = $orderService;
-        $this->orderReaderService = $orderReaderService;
         $this->customerService = $customerService;
-        $this->customerReaderService = $customerReaderService;
         $this->inventoryService = $inventoryService;
-        $this->inventoryReaderService = $inventoryReaderService;
     }
 
     /**
@@ -93,7 +80,7 @@ class SalesInventoryExample
         ];
 
         // Set up event listener for automatic inventory creation
-        $this->productService->getEventService()->listen('after_create', function ($product) use ($inventoryData) {
+        $this->productService->getEventService()->listen(EventService::AFTER_CREATE, function ($product) use ($inventoryData) {
             // Create inventory record
             $inventoryData['product_id'] = $product->id;
             $this->inventoryService->create($inventoryData);
@@ -139,7 +126,7 @@ class SalesInventoryExample
             ]
         ];
 
-        $this->productService->getEventService()->listen('after_bulk_create', function ($data) {
+        $this->productService->getEventService()->listen(EventService::AFTER_BULK_CREATE, function ($data) {
             foreach ($data as $productData) {
                 $product = Product::where('sku', $productData['sku'])->first();
                 if ($product) {
@@ -209,7 +196,7 @@ class SalesInventoryExample
         ];
 
         // Set up event listener for order items and inventory updates
-        $this->orderService->getEventService()->listen('after_create', function ($order) use ($orderItems) {
+        $this->orderService->getEventService()->listen(EventService::AFTER_CREATE, function ($order) use ($orderItems) {
             $subtotal = 0;
             
             foreach ($orderItems as $itemData) {
@@ -246,7 +233,7 @@ class SalesInventoryExample
         echo "Created order: {$order->order_number} with total: \${$order->total_amount}\n";
 
         // 3. Update order status
-        $this->orderService->getEventService()->listen('after_update', function ($order) {
+        $this->orderService->getEventService()->listen(EventService::AFTER_UPDATE, function ($order) {
             if ($order->status === 'shipped') {
                 $this->sendShippingNotification($order);
             }
@@ -259,14 +246,14 @@ class SalesInventoryExample
     /**
      * Example 3: Advanced Product Search and Filtering
      * 
-     * Demonstrates the power of BaseReaderService for complex queries.
+     * Demonstrates the power of BaseCrudService for complex queries.
      */
     public function searchAndFilterProducts()
     {
         echo "=== PRODUCT SEARCH AND FILTERING EXAMPLE ===\n\n";
 
         // 1. Search products by name
-        $searchResults = $this->productReaderService->findAll([
+        $searchResults = $this->productService->findAll([
             'search' => 'wireless',
             'status' => 'active',
             'sort_by' => 'price',
@@ -276,7 +263,7 @@ class SalesInventoryExample
         echo "Found {$searchResults->count()} wireless products\n";
 
         // 2. Filter products by price range
-        $priceFiltered = $this->productReaderService->findAll([
+        $priceFiltered = $this->productService->findAll([
             'price' => [
                 'operator' => 'between',
                 'value' => [50, 200]
@@ -289,7 +276,7 @@ class SalesInventoryExample
         echo "Found {$priceFiltered->count()} products between \$50-\$200\n";
 
         // 3. Filter by category with low stock
-        $lowStockProducts = $this->productReaderService->findAll([
+        $lowStockProducts = $this->productService->findAll([
             'category_id' => 1,
             'status' => 'active'
         ], ['category', 'inventory']);
@@ -301,7 +288,7 @@ class SalesInventoryExample
         echo "Found {$lowStock->count()} products with low stock in category 1\n";
 
         // 4. Paginated results
-        $paginatedResults = $this->productReaderService->findAll([
+        $paginatedResults = $this->productService->findAll([
             'paginate' => 10, // 10 items per page
             'status' => 'active',
             'sort_by' => 'created_at',
@@ -322,7 +309,7 @@ class SalesInventoryExample
         echo "=== SALES ANALYTICS EXAMPLE ===\n\n";
 
         // 1. Get recent orders with customer and item details
-        $recentOrders = $this->orderReaderService->findAll([
+        $recentOrders = $this->orderService->findAll([
             'created_at' => [
                 'operator' => 'gte',
                 'value' => now()->subDays(30)->toDateString()
@@ -339,7 +326,7 @@ class SalesInventoryExample
         echo "Total sales: \${$totalSales}\n";
 
         // 3. Get top customers by order count
-        $topCustomers = $this->customerReaderService->findAll([
+        $topCustomers = $this->customerService->findAll([
             'status' => 'active'
         ], ['orders']);
 
@@ -353,7 +340,7 @@ class SalesInventoryExample
         }
 
         // 4. Get low stock products
-        $lowStockProducts = $this->productReaderService->findAll([
+        $lowStockProducts = $this->productService->findAll([
             'status' => 'active'
         ], ['inventory']);
 
@@ -379,7 +366,7 @@ class SalesInventoryExample
         echo "=== INVENTORY MANAGEMENT EXAMPLE ===\n\n";
 
         // 1. Get all inventory with low stock
-        $lowStockInventory = $this->inventoryReaderService->findAll([
+        $lowStockInventory = $this->inventoryService->findAll([
             'quantity' => [
                 'operator' => 'lte',
                 'value' => 10
@@ -395,7 +382,7 @@ class SalesInventoryExample
         ];
 
         foreach ($inventoryUpdates as $update) {
-            $inventory = $this->inventoryReaderService->findById($update['product_id']);
+            $inventory = $this->inventoryService->findById($update['product_id']);
             if ($inventory) {
                 $this->inventoryService->update($inventory->id, [
                     'quantity' => $update['quantity']
@@ -466,7 +453,7 @@ class SalesInventoryExample
         // 1. Enable caching for product queries
         $startTime = microtime(true);
         
-        $products = $this->productReaderService->findAll([
+        $products = $this->productService->findAll([
             'status' => 'active',
             'sort_by' => 'name'
         ], ['category']);
@@ -478,7 +465,7 @@ class SalesInventoryExample
         echo "Products found: {$products->count()}\n";
 
         // 2. Use chunked processing for large datasets
-        $this->productReaderService->findAllChunked([
+        $this->productService->findAllChunked([
             'status' => 'active'
         ], function ($products) {
             echo "Processing chunk of {$products->count()} products\n";
@@ -492,7 +479,7 @@ class SalesInventoryExample
 
     private function updateInventory(int $productId, int $quantity): void
     {
-        $inventory = $this->inventoryReaderService->findById($productId);
+        $inventory = $this->inventoryService->findById($productId);
         if ($inventory) {
             $newQuantity = $inventory->quantity - $quantity;
             $this->inventoryService->update($inventory->id, [
@@ -537,7 +524,7 @@ class SalesInventoryExample
     private function setupBusinessEventListeners(): void
     {
         // Product creation events
-        $this->productService->getEventService()->listen('after_create', function ($product) {
+        $this->productService->getEventService()->listen(EventService::AFTER_CREATE, function ($product) {
             // Create inventory
             $this->inventoryService->create([
                 'product_id' => $product->id,
@@ -555,7 +542,7 @@ class SalesInventoryExample
         });
 
         // Order creation events
-        $this->orderService->getEventService()->listen('after_create', function ($order) {
+        $this->orderService->getEventService()->listen(EventService::AFTER_CREATE, function ($order) {
             // Send order confirmation
             $this->sendOrderConfirmation($order);
 
@@ -567,7 +554,7 @@ class SalesInventoryExample
         });
 
         // Order update events
-        $this->orderService->getEventService()->listen('after_update', function ($order) {
+        $this->orderService->getEventService()->listen(EventService::AFTER_UPDATE, function ($order) {
             if ($order->status === 'shipped') {
                 $this->sendShippingNotification($order);
             } elseif ($order->status === 'cancelled') {
@@ -626,53 +613,6 @@ class ProductCrudService extends BaseCrudService
 }
 
 /**
- * Product Reader Service
- */
-class ProductReaderService extends BaseReaderService
-{
-    public function __construct(
-        Product $model,
-        SearchService $searchService,
-        ExportService $exportService,
-        EventService $eventService,
-        QueryLogger $queryLogger
-    ) {
-        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
-    }
-
-    public function getDirectFilterableColumns(): array
-    {
-        return [
-            'name', 'sku', 'price', 'cost', 'category_id', 'supplier_id', 'status'
-        ];
-    }
-
-    public function getDirectSortableColumns(): array
-    {
-        return [
-            'name', 'sku', 'price', 'cost', 'created_at', 'updated_at'
-        ];
-    }
-
-    public function getDirectTextSearchColumns(): array
-    {
-        return [
-            'name', 'description', 'sku'
-        ];
-    }
-
-    public function getCollectionRelations(): array
-    {
-        return ['category', 'supplier'];
-    }
-
-    public function getSingleRecordRelations(): array
-    {
-        return ['category', 'supplier', 'inventory'];
-    }
-}
-
-/**
  * Order CRUD Service
  */
 class OrderCrudService extends BaseCrudService
@@ -688,7 +628,7 @@ class OrderCrudService extends BaseCrudService
     public function getDirectFilterableColumns(): array
     {
         return [
-            'customer_id', 'order_number', 'status', 'total_amount', 'created_at'
+            'customer_id', 'order_number', 'status', 'total_amount'
         ];
     }
 
@@ -713,54 +653,7 @@ class OrderCrudService extends BaseCrudService
 
     public function getSingleRecordRelations(): array
     {
-        return ['customer', 'items.product'];
-    }
-}
-
-/**
- * Order Reader Service
- */
-class OrderReaderService extends BaseReaderService
-{
-    public function __construct(
-        Order $model,
-        SearchService $searchService,
-        ExportService $exportService,
-        EventService $eventService,
-        QueryLogger $queryLogger
-    ) {
-        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
-    }
-
-    public function getDirectFilterableColumns(): array
-    {
-        return [
-            'customer_id', 'order_number', 'status', 'total_amount', 'created_at'
-        ];
-    }
-
-    public function getDirectSortableColumns(): array
-    {
-        return [
-            'order_number', 'status', 'total_amount', 'created_at', 'updated_at'
-        ];
-    }
-
-    public function getDirectTextSearchColumns(): array
-    {
-        return [
-            'order_number'
-        ];
-    }
-
-    public function getCollectionRelations(): array
-    {
-        return ['customer', 'items'];
-    }
-
-    public function getSingleRecordRelations(): array
-    {
-        return ['customer', 'items.product'];
+        return ['customer', 'items', 'items.product'];
     }
 }
 
@@ -787,14 +680,14 @@ class CustomerCrudService extends BaseCrudService
     public function getDirectSortableColumns(): array
     {
         return [
-            'name', 'email', 'created_at', 'updated_at'
+            'name', 'email', 'status', 'created_at', 'updated_at'
         ];
     }
 
     public function getDirectTextSearchColumns(): array
     {
         return [
-            'name', 'email', 'phone'
+            'name', 'email'
         ];
     }
 
@@ -805,54 +698,7 @@ class CustomerCrudService extends BaseCrudService
 
     public function getSingleRecordRelations(): array
     {
-        return ['orders'];
-    }
-}
-
-/**
- * Customer Reader Service
- */
-class CustomerReaderService extends BaseReaderService
-{
-    public function __construct(
-        Customer $model,
-        SearchService $searchService,
-        ExportService $exportService,
-        EventService $eventService,
-        QueryLogger $queryLogger
-    ) {
-        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
-    }
-
-    public function getDirectFilterableColumns(): array
-    {
-        return [
-            'name', 'email', 'phone', 'status'
-        ];
-    }
-
-    public function getDirectSortableColumns(): array
-    {
-        return [
-            'name', 'email', 'created_at', 'updated_at'
-        ];
-    }
-
-    public function getDirectTextSearchColumns(): array
-    {
-        return [
-            'name', 'email', 'phone'
-        ];
-    }
-
-    public function getCollectionRelations(): array
-    {
-        return ['orders'];
-    }
-
-    public function getSingleRecordRelations(): array
-    {
-        return ['orders'];
+        return ['orders', 'orders.items'];
     }
 }
 
@@ -879,7 +725,7 @@ class InventoryCrudService extends BaseCrudService
     public function getDirectSortableColumns(): array
     {
         return [
-            'quantity', 'created_at', 'updated_at'
+            'product_id', 'quantity', 'min_stock_level', 'max_stock_level', 'created_at', 'updated_at'
         ];
     }
 
@@ -900,51 +746,3 @@ class InventoryCrudService extends BaseCrudService
         return ['product'];
     }
 }
-
-/**
- * Inventory Reader Service
- */
-class InventoryReaderService extends BaseReaderService
-{
-    public function __construct(
-        Inventory $model,
-        SearchService $searchService,
-        ExportService $exportService,
-        EventService $eventService,
-        QueryLogger $queryLogger
-    ) {
-        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
-    }
-
-    public function getDirectFilterableColumns(): array
-    {
-        return [
-            'product_id', 'quantity', 'min_stock_level', 'max_stock_level', 'location'
-        ];
-    }
-
-    public function getDirectSortableColumns(): array
-    {
-        return [
-            'quantity', 'created_at', 'updated_at'
-        ];
-    }
-
-    public function getDirectTextSearchColumns(): array
-    {
-        return [
-            'location'
-        ];
-    }
-
-    public function getCollectionRelations(): array
-    {
-        return ['product'];
-    }
-
-    public function getSingleRecordRelations(): array
-    {
-        return ['product'];
-    }
-}
-
