@@ -568,10 +568,3 @@ $results = $service->findAll(['strategies' => 'custom_strategy']);
 // This will throw an InvalidArgumentException if ExportService is not injected
 $data = $service->export('csv', $data);
 ```
-
-### Best Practices
-
-1. **Proper Type Hints**: Use proper type hints for better IDE support and type safety
-2 **Service Registration**: Call `configureServices()` after parent constructor for service setup
-3 **Strategy Pattern**: Use `Strategy::key()` method pattern for strategy registration
-4 **Event Constants**: Use EventService static constants (e.g., `EventService::BEFORE_CREATE`)

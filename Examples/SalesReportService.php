@@ -75,16 +75,10 @@ class SalesReportService extends BaseReaderService
      */
     public function getTopOrders(array $options = []): \Illuminate\Support\Collection
     {
-        // Fire before event
-        $this->eventService->fire(EventService::BEFORE_FIND, $options);
-        
         $result = $this->findAll([
             'strategies' => TopOrdersStrategy::key(),
             ...$options
         ]);
-        
-        // Fire after event
-        $this->eventService->fire(EventService::AFTER_FIND, $result);
         
         return $result;
     }
@@ -97,16 +91,10 @@ class SalesReportService extends BaseReaderService
      */
     public function getTopSales(array $options = []): \Illuminate\Support\Collection
     {
-        // Fire before event
-        $this->eventService->fire(EventService::BEFORE_FIND, $options);
-        
         $result = $this->findAll([
             'strategies' => TopSalesStrategy::key(),
             ...$options
         ]);
-        
-        // Fire after event
-        $this->eventService->fire(EventService::AFTER_FIND, $result);
         
         return $result;
     }
@@ -120,8 +108,7 @@ class SalesReportService extends BaseReaderService
      */
     public function exportSalesReport(string $format, array $options = []): mixed
     {
-        $data = $this->findAll($options);
-        return $this->export($format, $data);
+        return $this->export($format, $options);
     }
 
     // ========================================================================

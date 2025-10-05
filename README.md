@@ -174,7 +174,7 @@ class TopOrdersStrategy implements SearchStrategyInterface
 $this->searchService->addStrategy(TopOrdersStrategy::key(), new TopOrdersStrategy());
 
 // Use in queries
-$results = $this->findAll(['strategies' => 'top_orders']);
+$results = $this->findAll(['strategies' => TopOrdersStrategy::key()]);
 ```
 
 **Complete Example:** See [Examples/SalesReportService.php](Examples/SalesReportService.php) for full implementation.

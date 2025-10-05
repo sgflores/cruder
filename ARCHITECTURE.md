@@ -17,7 +17,7 @@ The CRUDer package is a comprehensive Laravel package that provides a robust, ex
 2. **Open/Closed Principle (OCP)**
    - Open for extension through strategies
    - Closed for modification of core functionality
-   - New search/validation/export strategies can be added without changing existing code
+   - Search/Validation/Export strategies can be added without changing existing code
 
 3. **Liskov Substitution Principle (LSP)**
    - Child services can be substituted for parent services
