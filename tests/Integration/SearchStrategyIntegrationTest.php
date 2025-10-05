@@ -325,7 +325,43 @@ class SearchStrategyIntegrationTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         
         // This should throw an exception if we try to use a non-existent strategy
-        $this->userService->findAll(['searchStrategy' => 'nonexistent']);
+        $this->userService->findAll(['strategies' => 'nonexistent']);
+    }
+
+    public function test_strategies_parameter_accepts_array(): void
+    {
+        // Create test user
+        User::factory()->create([
+            'name' => 'Test User',
+            'department_id' => $this->department->id
+        ]);
+
+        // Test that strategies parameter accepts array format
+        $results = $this->userService->findAll([
+            'search' => 'Test User',
+            'strategies' => ['like']
+        ]);
+        
+        $this->assertGreaterThanOrEqual(1, $results->count());
+        $this->assertTrue($results->pluck('name')->contains('Test User'));
+    }
+
+    public function test_strategies_parameter_accepts_comma_separated_string(): void
+    {
+        // Create test user
+        User::factory()->create([
+            'name' => 'Test User',
+            'department_id' => $this->department->id
+        ]);
+
+        // Test that strategies parameter accepts comma-separated string format
+        $results = $this->userService->findAll([
+            'search' => 'Test User',
+            'strategies' => 'like'
+        ]);
+        
+        $this->assertGreaterThanOrEqual(1, $results->count());
+        $this->assertTrue($results->pluck('name')->contains('Test User'));
     }
 
     public function test_strategy_with_audit_trail(): void

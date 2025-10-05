@@ -10,6 +10,32 @@ namespace SgFlores\Cruder\Services;
  */
 class EventService
 {
+    // ========================================================================
+    // --- Event Constants ---
+    // ========================================================================
+    
+    // Reader Events
+    public const BEFORE_FIND = 'before_find';
+    public const AFTER_FIND = 'after_find';
+    
+    // CRUD Events
+    public const BEFORE_CREATE = 'before_create';
+    public const AFTER_CREATE = 'after_create';
+    public const BEFORE_UPDATE = 'before_update';
+    public const AFTER_UPDATE = 'after_update';
+    public const BEFORE_DELETE = 'before_delete';
+    public const AFTER_DELETE = 'after_delete';
+    
+    // Bulk CRUD Events
+    public const BEFORE_BULK_CREATE = 'before_bulk_create';
+    public const AFTER_BULK_CREATE = 'after_bulk_create';
+    public const BEFORE_BULK_UPDATE = 'before_bulk_update';
+    public const AFTER_BULK_UPDATE = 'after_bulk_update';
+    public const BEFORE_BULK_DELETE = 'before_bulk_delete';
+    public const AFTER_BULK_DELETE = 'after_bulk_delete';
+    public const BEFORE_BULK_UPDATE_FILTERS = 'before_bulk_update_filters';
+    public const BEFORE_BULK_DELETE_FILTERS = 'before_bulk_delete_filters';
+    
     /**
      * Registered event listeners.
      * 

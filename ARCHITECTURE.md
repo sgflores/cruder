@@ -41,11 +41,6 @@ The CRUDer package is a comprehensive Laravel package that provides a robust, ex
 - `ValidationStrategyInterface` - Different validation approaches (array rules, custom logic)
 - `ExportStrategyInterface` - Different export formats (CSV, JSON, XML)
 
-**Strategy Enforcement**:
-- **Purpose**: Force specific search strategies for specialized reporting services
-- **Implementation**: `shouldEnforceSearchStrategies()` method bypasses default search
-- **Use Cases**: Analytics services, reporting services, business intelligence
-- **Benefits**: Complete control over query execution, complex aggregations, custom business logic
 
 ### 2. Template Method Pattern
 **Purpose**: Defines the skeleton of operations while allowing subclasses to override specific steps.
@@ -126,7 +121,6 @@ public function getDirectFilterableColumns(): array
 - Register search strategies
 - Apply search logic to query builders
 - Handle different search types (LIKE, full-text, custom)
-- Support strategy enforcement for specialized services
 - Manage multiple strategy execution with AND/OR logic
 
 #### ValidationService
@@ -159,8 +153,9 @@ public function getDirectFilterableColumns(): array
 ```
 Constructor Call
 ├── Model Assignment
-├── Service Initialization (Search, Export, Event, Validation)
-├── Default Strategy Registration
+├── Service Dependency Injection (Search, Export, Event, Validation, QueryLogger)
+├── Service Validation (Per-use validation for optional services)
+├── Strategy Registration (using Strategy::key() pattern)
 └── Custom Service Configuration
 ```
 
@@ -168,47 +163,26 @@ Constructor Call
 ```
 findAll() Request
 ├── 1. Column Validation
-├── 2. Strategy Enforcement Check
-│   ├── If enabled: Execute only registered strategies
-│   └── If disabled: Continue with default flow
-├── 3. Query Builder Creation
-├── 4. Search Strategy Application
-├── 5. Filter Application
-├── 6. Sorting Application
-├── 7. Pagination Application
-├── 8. Query Execution with Caching
-├── 9. Relationship Loading
-├── 10. Response Transformation
-└── 11. Return Results
+├── 2. Query Builder Creation
+├── 3. Search Strategy Application
+├── 4. Filter Application
+├── 5. Sorting Application
+├── 6. Pagination Application
+├── 7. Query Execution with Caching
+├── 8. Relationship Loading
+├── 9. Response Transformation
+└── 10. Return Results
 ```
 
-### 2.1. Strategy Enforcement Lifecycle
-```
-Strategy-Enforced findAll() Request
-├── 1. Check shouldEnforceSearchStrategies()
-├── 2. Resolve strategies to execute
-│   ├── From filters['searchStrategy'] parameter
-│   ├── Or use getDefaultSearchStrategy()
-│   └── Or use first registered strategy
-├── 3. Execute strategies sequentially
-│   ├── Apply each strategy to query builder
-│   ├── Combine with AND/OR logic
-│   └── Maintain query type consistency
-├── 4. Apply additional filters (non-strategy)
-├── 5. Apply sorting and pagination
-├── 6. Execute final query
-└── 7. Return results
-```
-
-### 3. Create Operations Lifecycle
+### 2.1. Create Operations Lifecycle
 ```
 create() Request
 ├── 1. Input Validation
-├── 2. Fire 'before_create' Event
+├── 2. Fire EventService::BEFORE_CREATE Event
 ├── 3. Data Preparation
 ├── 4. Database Transaction Start
 ├── 5. Model Creation
-├── 6. Fire 'after_create' Event
+├── 6. Fire EventService::AFTER_CREATE Event
 ├── 7. Cache Invalidation
 ├── 8. Transaction Commit
 └── 9. Return Created Model
@@ -219,11 +193,11 @@ create() Request
 update() Request
 ├── 1. Model Retrieval
 ├── 2. Input Validation
-├── 3. Fire 'before_update' Event
+├── 3. Fire EventService::BEFORE_UPDATE Event
 ├── 4. Data Preparation
 ├── 5. Database Transaction Start
 ├── 6. Model Update
-├── 7. Fire 'after_update' Event
+├── 7. Fire EventService::AFTER_UPDATE Event
 ├── 8. Cache Invalidation
 ├── 9. Transaction Commit
 └── 10. Return Updated Model
@@ -233,10 +207,10 @@ update() Request
 ```
 delete() Request
 ├── 1. Model Retrieval
-├── 2. Fire 'before_delete' Event
+├── 2. Fire EventService::BEFORE_DELETE Event
 ├── 3. Database Transaction Start
 ├── 4. Model Deletion (Soft/Hard)
-├── 5. Fire 'after_delete' Event
+├── 5. Fire EventService::AFTER_DELETE Event
 ├── 6. Cache Invalidation
 ├── 7. Transaction Commit
 └── 8. Return Deletion Result
@@ -245,18 +219,33 @@ delete() Request
 ## 🔧 Configuration Architecture
 
 ### Service Configuration
-Services are configured through the `configureServices()` method in child classes:
+Services are configured through the `configureServices()` method in child classes using proper dependency injection:
 
 ```php
+public function __construct(
+    Model $model,
+    SearchService $searchService,
+    ExportService $exportService,
+    EventService $eventService,
+    QueryLogger $queryLogger
+) {
+    parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
+    $this->configureServices();
+}
+
 protected function configureServices(): void
 {
-    parent::configureServices();
+    // Add custom search strategies using key() method pattern
+    $this->searchService->addStrategy(CustomSearchStrategy::key(), new CustomSearchStrategy());
     
-    // Add custom search strategies
-    $this->searchService->addStrategy('custom', new CustomSearchStrategy());
+    // Add custom export strategies using addStrategyByKey()
+    $this->exportService->addStrategyByKey(new XmlExportStrategy());
     
-    // Add custom export strategies
-    $this->exportService->addStrategy('xml', new XmlExportStrategy());
+    // Configure event listeners using static constants
+    $this->eventService->listen(EventService::BEFORE_CREATE, function($data) {
+        // Custom logic
+        return $data;
+    });
 }
 ```
 
@@ -306,6 +295,8 @@ The package uses a trait-based configuration system that provides type safety, I
 - **Validation**: Laravel validation system
 - **Caching**: Laravel cache system
 - **Events**: Laravel event system compatibility
+- **Dependency Injection**: Proper Laravel DI patterns with concrete services
+- **Service Container**: Integration with Laravel's service container
 
 ### Database Integration
 - **Eloquent ORM**: Full Eloquent model support
@@ -329,13 +320,20 @@ The package uses a trait-based configuration system that provides type safety, I
 - **Exception Management**: Comprehensive exception handling
 - **Error Logging**: Detailed error logging for debugging
 - **Graceful Degradation**: Handle errors without breaking functionality
+- **Service Validation**: Runtime validation of service dependencies with clear error messages
 
 ## 🎯 Best Practices
 
 ### Service Design
 - **Single Responsibility**: Each service handles one concern
-- **Dependency Injection**: Use constructor injection for dependencies
+- **Dependency Injection**: Use constructor injection with concrete services, not optional ones
 - **Interface Segregation**: Keep interfaces focused and minimal
+- **Service Validation**: Validate dependencies at runtime with clear error messages
+
+### Constructor Patterns
+- **BaseCrudService**: Inject `Model`, `EventService`, `ValidationService` (EventService and ValidationService optional)
+- **BaseReaderService**: Inject `Model`, `SearchService`, `ExportService`, `EventService`, `QueryLogger` (all services optional)
+- **Concrete Services**: Always use concrete service instances in examples and implementations
 
 ### Strategy Design
 - **Interchangeable**: Strategies should be swappable at runtime
@@ -351,6 +349,7 @@ The package uses a trait-based configuration system that provides type safety, I
 - **Caching Strategy**: Cache at appropriate levels
 - **Query Optimization**: Use eager loading and proper indexing
 - **Memory Management**: Handle large datasets efficiently
+- **Per-Use Validation**: Validate services only when needed for better performance
 
 ---
 
@@ -358,10 +357,12 @@ The package uses a trait-based configuration system that provides type safety, I
 
 The CRUDer package provides a robust, extensible foundation for Laravel applications that need comprehensive CRUD functionality. By following SOLID principles and implementing proven design patterns, it offers:
 
-- **Maintainable Code**: Clean separation of concerns
-- **Extensible Architecture**: Easy to add new features
-- **Performance Optimized**: Built-in caching and optimization
-- **Security Focused**: Column validation and input sanitization
-- **Developer Friendly**: Clear APIs and comprehensive documentation
+- **Maintainable Code**: Clean separation of concerns with proper dependency injection
+- **Extensible Architecture**: Easy to add new features through strategy patterns
+- **Performance Optimized**: Built-in caching, query optimization, and per-use service validation
+- **Security Focused**: Column validation, input sanitization, and audit trails
+- **Developer Friendly**: Clear APIs, comprehensive documentation, and proper Laravel integration
+- **Type Safety**: Proper type hints and IDE support with static event constants
+- **Flexible Services**: Optional service injection with runtime validation for optimal performance
 
-The architecture is designed to grow with your application while maintaining performance and code quality.
+The architecture is designed to grow with your application while maintaining performance, code quality, and following Laravel best practices.

@@ -3,6 +3,8 @@
 namespace SgFlores\Cruder\Examples;
 
 use SgFlores\Cruder\BaseCrudService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ValidationService;
 use SgFlores\Cruder\Strategies\Validation\ValidationStrategyInterface;
 use App\Models\Product;
 use Illuminate\Support\Facades\Validator;
@@ -16,9 +18,12 @@ use Illuminate\Validation\ValidationException;
  */
 class ProductExample extends BaseCrudService
 {
-    public function __construct(Product $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Product $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     // ========================================================================

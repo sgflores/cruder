@@ -11,7 +11,7 @@ A powerful, feature-rich CRUD service package for Laravel applications built on 
 - **Complete CRUD Operations** - Create, Read, Update, Delete with full validation
 - **Bulk Operations** - Efficient bulk create, update, and delete operations
 - **Advanced Filtering & Search** - Column-based filtering, sorting, and text search
-- **Search Strategy System** - Pluggable search strategies with strategy enforcement for reporting and analytics
+- **Search Strategy System** - Pluggable search strategies for custom search implementations
 - **Export Functionality** - CSV, JSON, and custom export formats
 - **Query Caching** - Built-in query caching with configurable lifetime
 - **Performance Monitoring** - Query logging and slow query detection
@@ -57,13 +57,18 @@ The package will be automatically discovered by Laravel.
 namespace App\Services;
 
 use SgFlores\Cruder\BaseCrudService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ValidationService;
 use App\Models\User;
 
 class UserService extends BaseCrudService
 {
-    public function __construct(User $user)
-    {
-        parent::__construct($user);
+    public function __construct(
+        User $user,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($user, $eventService, $validationService);
     }
     
     // Override configuration methods as needed
@@ -94,7 +99,13 @@ class UserService extends BaseCrudService
 ### 2. Basic Usage
 
 ```php
-$userService = new UserService(new User());
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ValidationService;
+
+// Create service with proper dependency injection
+$eventService = new EventService();
+$validationService = new ValidationService();
+$userService = new UserService(new User(), $eventService, $validationService);
 
 // Find all users with filtering and pagination
 $users = $userService->findAll([
@@ -127,23 +138,44 @@ $userService->bulkCreate([
     ['name' => 'User 1', 'email' => 'user1@example.com'],
     ['name' => 'User 2', 'email' => 'user2@example.com']
 ]);
-
-// Export data
-$csvData = $userService->export('csv', [], ['name', 'email']);
-$jsonData = $userService->export('json', [], ['name', 'email']);
 ```
 
-### 3. Search Strategies & Strategy Enforcement
+> **📝 Note**: For export functionality, you'll need to extend `BaseReaderService` with `SearchService` and `ExportService` injected. See [Examples/README.md](Examples/README.md) for complete examples.
 
-Create custom search implementations for complex reporting and analytics with strategy enforcement for specialized services.
+### 3. Search Strategies
+
+Create custom search implementations for complex reporting and analytics using the new strategy pattern.
 
 **Key Features:**
-- **Custom Search Strategies** - Pluggable strategies using DB::table() or Eloquent Builder for complex queries
-- **Strategy Enforcement** - Bypass default search, use only registered strategies
-- **Multiple Strategy Support** - Run multiple strategies with AND logic
+- **Custom Search Strategies** - Pluggable strategies using the `key()` method pattern
+- **Strategy Registration** - Use `Strategy::key()` for consistent strategy registration
 - **Query Type Flexibility** - Support both Eloquent Builder and QueryBuilder
+- **Proper Service Injection** - Extend `BaseReaderService` with `SearchService` injected
 
-**Configuration:** See [CONFIGURATION.md](CONFIGURATION.md) for detailed methods.
+**Example Strategy Implementation:**
+```php
+class TopOrdersStrategy implements SearchStrategyInterface
+{
+    public static function key(): string
+    {
+        return 'top_orders';
+    }
+    
+    public function search(Builder $query, array $filters, array $config): Builder
+    {
+        return $query->orderBy('total_amount', 'desc');
+    }
+}
+```
+
+**Usage:**
+```php
+// Register strategy
+$this->searchService->addStrategy(TopOrdersStrategy::key(), new TopOrdersStrategy());
+
+// Use in queries
+$results = $this->findAll(['strategies' => 'top_orders']);
+```
 
 **Complete Example:** See [Examples/SalesReportService.php](Examples/SalesReportService.php) for full implementation.
 
@@ -159,7 +191,7 @@ Create custom search implementations for complex reporting and analytics with st
 **Quick Reference:**
 - **[SimpleSalesExample.php](Examples/SimpleSalesExample.php)** - Basic CRUD operations
 - **[SalesInventoryExample.php](Examples/SalesInventoryExample.php)** - Advanced inventory management
-- **[SalesReportService.php](Examples/SalesReportService.php)** - Strategy enforcement & custom search strategies
+- **[SalesReportService.php](Examples/SalesReportService.php)** - Custom search strategies for reporting
 - **[ProductExample.php](Examples/ProductExample.php)** - Custom validation strategies
 - **[ExportExample.php](Examples/ExportExample.php)** - Data export functionality
 

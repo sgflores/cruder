@@ -4,23 +4,31 @@ namespace SgFlores\Cruder\Examples;
 
 use App\Models\User;
 use SgFlores\Cruder\BaseCrudService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ValidationService;
 
 /**
- * Example User Service implementation showing how to use the new trait-based configuration.
+ * Example User Service implementation showing proper dependency injection patterns.
  * 
  * This example demonstrates how to override the default configuration methods
- * to customize the service behavior for a specific model.
+ * to customize the service behavior for a specific model with proper Laravel
+ * dependency injection standards.
  */
 class UserService extends BaseCrudService
 {
     /**
      * UserService constructor.
      * 
-     * @param User $model
+     * @param User $model The User model instance
+     * @param EventService $eventService Event handling service
+     * @param ValidationService $validationService Validation service
      */
-    public function __construct(User $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        User $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     // ========================================================================

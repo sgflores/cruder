@@ -2,6 +2,7 @@
 
 namespace SgFlores\Cruder\Traits;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -71,7 +72,7 @@ trait PerformanceMonitoringTrait
         // Check if query cache is enabled using the configuration method
         if (method_exists($this, 'isQueryCacheEnabled') && $this->isQueryCacheEnabled()) {
             // Clear cache using simple cache operations
-            \Illuminate\Support\Facades\Cache::flush();
+            Cache::flush();
         }
     }
     

@@ -4,6 +4,11 @@ namespace SgFlores\Cruder\Examples;
 
 use SgFlores\Cruder\BaseCrudService;
 use SgFlores\Cruder\BaseReaderService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ValidationService;
+use SgFlores\Cruder\Services\SearchService;
+use SgFlores\Cruder\Services\ExportService;
+use SgFlores\Cruder\Services\QueryLogger;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Order;
@@ -580,9 +585,12 @@ class SalesInventoryExample
  */
 class ProductCrudService extends BaseCrudService
 {
-    public function __construct(Product $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Product $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     public function getDirectFilterableColumns(): array
@@ -622,9 +630,14 @@ class ProductCrudService extends BaseCrudService
  */
 class ProductReaderService extends BaseReaderService
 {
-    public function __construct(Product $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Product $model,
+        SearchService $searchService,
+        ExportService $exportService,
+        EventService $eventService,
+        QueryLogger $queryLogger
+    ) {
+        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
     }
 
     public function getDirectFilterableColumns(): array
@@ -664,9 +677,12 @@ class ProductReaderService extends BaseReaderService
  */
 class OrderCrudService extends BaseCrudService
 {
-    public function __construct(Order $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Order $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     public function getDirectFilterableColumns(): array
@@ -706,9 +722,14 @@ class OrderCrudService extends BaseCrudService
  */
 class OrderReaderService extends BaseReaderService
 {
-    public function __construct(Order $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Order $model,
+        SearchService $searchService,
+        ExportService $exportService,
+        EventService $eventService,
+        QueryLogger $queryLogger
+    ) {
+        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
     }
 
     public function getDirectFilterableColumns(): array
@@ -748,9 +769,12 @@ class OrderReaderService extends BaseReaderService
  */
 class CustomerCrudService extends BaseCrudService
 {
-    public function __construct(Customer $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Customer $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     public function getDirectFilterableColumns(): array
@@ -790,9 +814,14 @@ class CustomerCrudService extends BaseCrudService
  */
 class CustomerReaderService extends BaseReaderService
 {
-    public function __construct(Customer $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Customer $model,
+        SearchService $searchService,
+        ExportService $exportService,
+        EventService $eventService,
+        QueryLogger $queryLogger
+    ) {
+        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
     }
 
     public function getDirectFilterableColumns(): array
@@ -832,9 +861,12 @@ class CustomerReaderService extends BaseReaderService
  */
 class InventoryCrudService extends BaseCrudService
 {
-    public function __construct(Inventory $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Inventory $model,
+        EventService $eventService,
+        ValidationService $validationService
+    ) {
+        parent::__construct($model, $eventService, $validationService);
     }
 
     public function getDirectFilterableColumns(): array
@@ -874,9 +906,14 @@ class InventoryCrudService extends BaseCrudService
  */
 class InventoryReaderService extends BaseReaderService
 {
-    public function __construct(Inventory $model)
-    {
-        parent::__construct($model);
+    public function __construct(
+        Inventory $model,
+        SearchService $searchService,
+        ExportService $exportService,
+        EventService $eventService,
+        QueryLogger $queryLogger
+    ) {
+        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
     }
 
     public function getDirectFilterableColumns(): array

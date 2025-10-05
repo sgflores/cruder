@@ -3,364 +3,477 @@
 namespace SgFlores\Cruder\Examples;
 
 use SgFlores\Cruder\BaseReaderService;
-use SgFlores\Cruder\Strategies\Search\SearchStrategyInterface;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\Customer;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use SgFlores\Cruder\Services\QueryLogger;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ExportService;
+use SgFlores\Cruder\Services\SearchService;
+use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
+use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
+use SgFlores\Cruder\Strategies\Search\SearchStrategyInterface;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Collection;
 
 /**
- * Sales Report Service demonstrating strategy enforcement with custom search strategies
+ * Sales Report Service Example
  * 
- * This example shows how to create a reporting service that enforces specific
- * search strategies for analytics and business intelligence using DB::table().
+ * This example demonstrates how to create a custom service extending BaseReaderService
+ * with custom search strategies for sales reporting.
+ * 
+ * Features:
+ * - Custom TopOrdersStrategy for finding top performing orders
+ * - Custom TopSalesStrategy for finding top sales by various criteria
+ * - Proper dependency injection with concrete services
+ * - Event-driven reporting with EventService
+ * - Export capabilities for reports
  */
 class SalesReportService extends BaseReaderService
 {
-    public function __construct(Order $model)
+    /**
+     * SalesReportService constructor.
+     * 
+     * @param Model $model The Eloquent model (Order, Product, etc.)
+     * @param SearchService $searchService Search service with custom strategies
+     * @param ExportService $exportService Export service for report generation
+     * @param EventService $eventService Event service for reporting events
+     * @param QueryLogger $queryLogger Query logger for performance monitoring
+     */
+    public function __construct(
+        Model $model,
+        SearchService $searchService,
+        ExportService $exportService,
+        EventService $eventService,
+        QueryLogger $queryLogger
+    ) {
+        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
+        
+        // Configure services after construction
+        $this->configureServices();
+    }
+
+    /**
+     * Configure custom search strategies for sales reporting.
+     * 
+     * @return void
+     */
+    protected function configureServices(): void
     {
-        parent::__construct($model);
-        $this->setupCustomSearchStrategies();
+        // Register custom search strategies
+        $this->searchService->addStrategy(TopOrdersStrategy::key(), new TopOrdersStrategy());
+        $this->searchService->addStrategy(TopSalesStrategy::key(), new TopSalesStrategy());
+        
+        // Configure export strategies using the new key() method
+        $this->exportService->addStrategy(CsvExportStrategy::key(), new CsvExportStrategy());
+        $this->exportService->addStrategy(JsonExportStrategy::key(), new JsonExportStrategy());
+    }
+
+    /**
+     * Get top orders based on various criteria.
+     * 
+     * @param array $options Additional options for the query
+     * @return \Illuminate\Support\Collection
+     */
+    public function getTopOrders(array $options = []): \Illuminate\Support\Collection
+    {
+        // Fire before event
+        $this->eventService->fire(EventService::BEFORE_FIND, $options);
+        
+        $result = $this->findAll([
+            'strategies' => TopOrdersStrategy::key(),
+            ...$options
+        ]);
+        
+        // Fire after event
+        $this->eventService->fire(EventService::AFTER_FIND, $result);
+        
+        return $result;
+    }
+
+    /**
+     * Get top sales based on various criteria.
+     * 
+     * @param array $options Additional options for the query
+     * @return \Illuminate\Support\Collection
+     */
+    public function getTopSales(array $options = []): \Illuminate\Support\Collection
+    {
+        // Fire before event
+        $this->eventService->fire(EventService::BEFORE_FIND, $options);
+        
+        $result = $this->findAll([
+            'strategies' => TopSalesStrategy::key(),
+            ...$options
+        ]);
+        
+        // Fire after event
+        $this->eventService->fire(EventService::AFTER_FIND, $result);
+        
+        return $result;
+    }
+
+    /**
+     * Export sales report in specified format.
+     * 
+     * @param string $format Export format (csv, json)
+     * @param array $options Query options
+     * @return mixed
+     */
+    public function exportSalesReport(string $format, array $options = []): mixed
+    {
+        $data = $this->findAll($options);
+        return $this->export($format, $data);
     }
 
     // ========================================================================
-    // --- Strategy Enforcement Configuration ---
+    // --- Override Configuration Methods ---
     // ========================================================================
 
     /**
-     * Enable strategy enforcement for this reporting service
+     * Define filterable columns for sales reports.
+     * 
+     * @return array
      */
-    public function shouldEnforceSearchStrategies(): bool
+    public function getDirectFilterableColumns(): array
+    {
+        return [
+            'id', 'customer_id', 'order_number', 'status', 'total_amount', 
+            'created_at', 'updated_at', 'deleted_at'
+        ];
+    }
+
+    /**
+     * Define sortable columns for sales reports.
+     * 
+     * @return array
+     */
+    public function getDirectSortableColumns(): array
+    {
+        return [
+            'id', 'order_number', 'total_amount', 'created_at', 'updated_at'
+        ];
+    }
+
+    /**
+     * Define text search columns for sales reports.
+     * 
+     * @return array
+     */
+    public function getDirectTextSearchColumns(): array
+    {
+        return [
+            'order_number', 'notes', 'customer_notes'
+        ];
+    }
+
+    /**
+     * Define relations to load for collections.
+     * 
+     * @return array
+     */
+    public function getCollectionRelations(): array
+    {
+        return [
+            'customer', 'items'
+        ];
+    }
+
+    /**
+     * Define relations to load for single records.
+     * 
+     * @return array
+     */
+    public function getSingleRecordRelations(): array
+    {
+        return [
+            'customer', 'items', 'createdBy', 'updatedBy'
+        ];
+    }
+
+    /**
+     * Get search parameter name.
+     * 
+     * @return string
+     */
+    public function getSearchParam(): string
+    {
+        return 'search';
+    }
+
+    /**
+     * Get strategies parameter name.
+     * 
+     * @return string
+     */
+    public function getStrategiesParam(): string
+    {
+        return 'strategies';
+    }
+
+    /**
+     * Get sort by parameter name.
+     * 
+     * @return string
+     */
+    public function getSortByParam(): string
+    {
+        return 'sort_by';
+    }
+
+    /**
+     * Get sort direction parameter name.
+     * 
+     * @return string
+     */
+    public function getSortDirectionParam(): string
+    {
+        return 'sort_direction';
+    }
+
+    /**
+     * Get default sort column.
+     * 
+     * @return string
+     */
+    public function getDefaultSortColumn(): string
+    {
+        return 'total_amount';
+    }
+
+    /**
+     * Get default sort direction.
+     * 
+     * @return string
+     */
+    public function getDefaultSortDirection(): string
+    {
+        return 'desc';
+    }
+
+    /**
+     * Enable query cache for better performance.
+     * 
+     * @return bool
+     */
+    public function isQueryCacheEnabled(): bool
     {
         return true;
     }
 
     /**
-     * Set default search strategy
-     */
-    public function getDefaultSearchStrategy(): ?string
-    {
-        return TopCustomersStrategy::key();
-    }
-
-    /**
-     * Configure searchable columns for the service
-     */
-    public function getSearchableColumns(): array
-    {
-        return ['order_number', 'customer_name', 'product_name'];
-    }
-
-    /**
-     * Configure filterable columns
-     */
-    public function getFilterableColumns(): array
-    {
-        return ['customer_id', 'product_id', 'status', 'total_amount', 'created_at'];
-    }
-
-    /**
-     * Configure sortable columns
-     */
-    public function getSortableColumns(): array
-    {
-        return ['total_amount', 'created_at', 'order_number'];
-    }
-
-    /**
-     * Set up custom search strategies for reporting
-     */
-    protected function setupCustomSearchStrategies(): void
-    {
-        $this->getSearchService()->addStrategy(TopCustomersStrategy::key(), new TopCustomersStrategy());
-        $this->getSearchService()->addStrategy(TopProductsStrategy::key(), new TopProductsStrategy());
-        $this->getSearchService()->addStrategy(SalesByDateStrategy::key(), new SalesByDateStrategy());
-    }
-
-    // ========================================================================
-    // --- Public Report Methods ---
-    // ========================================================================
-
-    /**
-     * Get top customers by total sales amount
+     * Get cache lifetime for sales reports.
      * 
-     * @param int $limit Number of customers to return
-     * @return Collection
+     * @return int
      */
-    public function getTopCustomers(int $limit = 10): Collection
+    public function getCacheLifetimeSeconds(): int
     {
-        $result = $this->findAll([
-            'searchStrategy' => TopCustomersStrategy::key(),
-            'limit' => $limit
-        ]);
-        
-        return $result instanceof Collection ? $result : collect($result->items());
-    }
-
-    /**
-     * Get top products by sales quantity
-     * 
-     * @param int $limit Number of products to return
-     * @return Collection
-     */
-    public function getTopProducts(int $limit = 10): Collection
-    {
-        $result = $this->findAll([
-            'searchStrategy' => TopProductsStrategy::key(),
-            'limit' => $limit
-        ]);
-        
-        return $result instanceof Collection ? $result : collect($result->items());
-    }
-
-    /**
-     * Get sales data by date range
-     * 
-     * @param string $startDate Start date (Y-m-d format)
-     * @param string $endDate End date (Y-m-d format)
-     * @return Collection
-     */
-    public function getSalesByDate(string $startDate, string $endDate): Collection
-    {
-        $result = $this->findAll([
-            'searchStrategy' => SalesByDateStrategy::key(),
-            'start_date' => $startDate,
-            'end_date' => $endDate
-        ]);
-        
-        return $result instanceof Collection ? $result : collect($result->items());
-    }
-
-    /**
-     * Get sales summary with pagination
-     * 
-     * @param array $filters Additional filters
-     * @param int $perPage Items per page
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
-     */
-    public function getSalesSummary(array $filters = [], int $perPage = 15)
-    {
-        return $this->findAll(array_merge($filters, [
-            'searchStrategy' => 'salesByDate',
-            'paginate' => $perPage
-        ]));
-    }
-
-    /**
-     * Export sales data to CSV
-     * 
-     * @param string $strategy Strategy to use for export
-     * @param array $filters Filters to apply
-     * @return string CSV data
-     */
-    public function exportSalesData(string $strategy, array $filters = []): string
-    {
-        return $this->export('csv', array_merge($filters, [
-            'searchStrategy' => $strategy
-        ]), ['customer_name', 'product_name', 'total_amount', 'order_date']);
+        return 300; // 5 minutes cache for reports
     }
 }
 
 /**
- * Top Customers Search Strategy
+ * Top Orders Search Strategy
  * 
- * Uses DB::table() to create complex reporting queries
+ * This strategy finds the top performing orders based on total amount
+ * and applies additional business logic for sales reporting.
  */
-class TopCustomersStrategy implements SearchStrategyInterface
+class TopOrdersStrategy implements SearchStrategyInterface
 {
+    /**
+     * Get the strategy key.
+     * 
+     * @return string
+     */
     public static function key(): string
     {
-        return 'topCustomers';
+        return 'top_orders';
     }
 
+    /**
+     * Apply the top orders search strategy.
+     * 
+     * @param Builder|QueryBuilder|null $query The query builder instance (optional)
+     * @param array $filters Applied filters
+     * @param array $config Strategy configuration
+     * @return Builder|QueryBuilder The modified query builder
+     */
     public function search(Builder|QueryBuilder|null $query, array $filters, array $config = []): Builder|QueryBuilder
     {
-        // Use DB::table() for complex reporting queries
-        return DB::table('orders')
-            ->join('customers', 'orders.customer_id', '=', 'customers.id')
-            ->select([
-                'customers.id',
-                'customers.name as customer_name',
-                'customers.email',
-                DB::raw('SUM(orders.total_amount) as total_spent'),
-                DB::raw('COUNT(orders.id) as total_orders'),
-                DB::raw('AVG(orders.total_amount) as average_order_value'),
-                DB::raw('MAX(orders.created_at) as last_order_date')
-            ])
-            ->where('orders.status', 'completed')
-            ->where('orders.deleted_at', null)
-            ->groupBy('customers.id', 'customers.name', 'customers.email')
-            ->orderBy('total_spent', 'desc');
+        // Apply base filters
+        $query = $this->applyBaseFilters($query, $filters);
+        
+        // Order by total amount descending (top orders)
+        $query->orderBy('total_amount', 'desc');
+        
+        // Apply date range if provided
+        if (isset($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+        
+        if (isset($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+        
+        // Apply minimum amount filter
+        if (isset($filters['min_amount'])) {
+            $query->where('total_amount', '>=', $filters['min_amount']);
+        }
+        
+        // Apply status filter
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        
+        // Limit results if specified
+        if (isset($filters['limit'])) {
+            $query->limit($filters['limit']);
+        } else {
+            $query->limit(100); // Default limit for top orders
+        }
+        
+        return $query;
+    }
+
+    /**
+     * Apply base filters to the query.
+     * 
+     * @param Builder $query
+     * @param array $filters
+     * @return Builder
+     */
+    private function applyBaseFilters(Builder $query, array $filters): Builder
+    {
+        // Only show completed orders by default
+        if (!isset($filters['status'])) {
+            $query->whereIn('status', ['completed', 'shipped', 'delivered']);
+        }
+        
+        // Exclude cancelled orders unless specifically requested
+        if (!isset($filters['include_cancelled'])) {
+            $query->where('status', '!=', 'cancelled');
+        }
+        
+        return $query;
     }
 }
 
 /**
- * Top Products Search Strategy
+ * Top Sales Search Strategy
  * 
- * Analyzes product performance using DB::table()
+ * This strategy finds the top sales based on various criteria
+ * including customer, product, and time-based analysis.
  */
-class TopProductsStrategy implements SearchStrategyInterface
+class TopSalesStrategy implements SearchStrategyInterface
 {
+    /**
+     * Get the strategy key.
+     * 
+     * @return string
+     */
     public static function key(): string
     {
-        return 'topProducts';
+        return 'top_sales';
     }
 
+    /**
+     * Applies search logic to the query builder.
+     * 
+     * @param Builder|QueryBuilder|null $query The query builder instance (optional)
+     * @param array $filters Array of query options
+     * @param array $config Optional search configuration
+     * @return Builder|QueryBuilder The modified query builder
+     */
     public function search(Builder|QueryBuilder|null $query, array $filters, array $config = []): Builder|QueryBuilder
     {
-        return DB::table('order_items')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->select([
-                'products.id',
-                'products.name as product_name',
-                'products.sku',
-                'products.price as unit_price',
-                DB::raw('SUM(order_items.quantity) as total_quantity_sold'),
-                DB::raw('SUM(order_items.quantity * order_items.price) as total_revenue'),
-                DB::raw('COUNT(DISTINCT orders.id) as order_count'),
-                DB::raw('AVG(order_items.quantity) as average_quantity_per_order')
-            ])
-            ->where('orders.status', 'completed')
-            ->where('orders.deleted_at', null)
-            ->where('order_items.deleted_at', null)
-            ->groupBy('products.id', 'products.name', 'products.sku', 'products.price')
-            ->orderBy('total_quantity_sold', 'desc');
-    }
-}
-
-/**
- * Sales By Date Search Strategy
- * 
- * Provides sales analytics by date range using DB::table()
- */
-class SalesByDateStrategy implements SearchStrategyInterface
-{
-    public static function key(): string
-    {
-        return 'salesByDate';
-    }
-
-    public function search(Builder|QueryBuilder|null $query, array $filters, array $config = []): Builder|QueryBuilder
-    {
-        $startDate = $filters['start_date'] ?? now()->subMonth()->format('Y-m-d');
-        $endDate = $filters['end_date'] ?? now()->format('Y-m-d');
-
-        return DB::table('orders')
-            ->join('customers', 'orders.customer_id', '=', 'customers.id')
-            ->select([
-                'orders.id as order_id',
-                'orders.order_number',
-                'customers.name as customer_name',
-                'customers.email as customer_email',
-                'orders.total_amount',
-                'orders.status',
-                'orders.created_at as order_date',
-                DB::raw('DATE(orders.created_at) as order_day'),
-                DB::raw('MONTH(orders.created_at) as order_month'),
-                DB::raw('YEAR(orders.created_at) as order_year')
-            ])
-            ->where('orders.status', 'completed')
-            ->where('orders.deleted_at', null)
-            ->whereBetween(DB::raw('DATE(orders.created_at)'), [$startDate, $endDate])
-            ->orderBy('orders.created_at', 'desc');
-    }
-}
-
-/**
- * Usage Example
- * 
- * This demonstrates how to use the SalesReportService with strategy enforcement
- */
-class SalesReportUsageExample
-{
-    public function demonstrateUsage()
-    {
-        // Initialize the service
-        $salesReport = new SalesReportService(new Order());
-
-        // Get top 10 customers by sales
-        $topCustomers = $salesReport->getTopCustomers(10);
-        echo "Top 10 Customers:\n";
-        foreach ($topCustomers as $customer) {
-            echo "{$customer->customer_name}: \${$customer->total_spent} ({$customer->total_orders} orders)\n";
+        // Apply base filters
+        $query = $this->applyBaseFilters($query, $filters);
+        
+        // Apply grouping and aggregation based on criteria
+        if (isset($filters['group_by'])) {
+            $query = $this->applyGrouping($query, $filters['group_by']);
         }
-
-        // Get top 5 products by quantity sold
-        $topProducts = $salesReport->getTopProducts(5);
-        echo "\nTop 5 Products:\n";
-        foreach ($topProducts as $product) {
-            echo "{$product->product_name}: {$product->total_quantity_sold} units sold\n";
+        
+        // Order by total amount descending
+        $query->orderBy('total_amount', 'desc');
+        
+        // Apply date range filters
+        if (isset($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
         }
-
-        // Get sales data for last 30 days
-        $lastMonth = now()->subMonth()->format('Y-m-d');
-        $today = now()->format('Y-m-d');
-        $salesData = $salesReport->getSalesByDate($lastMonth, $today);
-        echo "\nSales Data (Last 30 days):\n";
-        foreach ($salesData as $sale) {
-            echo "Order {$sale->order_number}: {$sale->customer_name} - \${$sale->total_amount}\n";
+        
+        if (isset($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
         }
-
-        // Export top customers to CSV
-        $csvData = $salesReport->exportSalesData(TopCustomersStrategy::key(), ['limit' => 20]);
-        file_put_contents('top_customers.csv', $csvData);
-
-        // Get paginated sales summary
-        $salesSummary = $salesReport->getSalesSummary(['start_date' => '2024-01-01', 'end_date' => '2024-12-31'], 25);
-        echo "\nTotal sales records: {$salesSummary->total()}\n";
-        echo "Current page: {$salesSummary->currentPage()}\n";
-        echo "Per page: {$salesSummary->perPage()}\n";
+        
+        // Apply customer filter
+        if (isset($filters['customer_id'])) {
+            $query->where('customer_id', $filters['customer_id']);
+        }
+        
+        // Apply product filter (if order has items relationship)
+        if (isset($filters['product_id'])) {
+            $query->whereHas('items', function ($q) use ($filters) {
+                $q->where('product_id', $filters['product_id']);
+            });
+        }
+        
+        // Limit results
+        if (isset($filters['limit'])) {
+            $query->limit($filters['limit']);
+        } else {
+            $query->limit(50); // Default limit for top sales
+        }
+        
+        return $query;
     }
-}
 
-/**
- * Advanced Usage with Custom Filters
- */
-class AdvancedSalesReportExample
-{
-    public function demonstrateAdvancedUsage()
+    /**
+     * Apply base filters to the query.
+     * 
+     * @param Builder $query
+     * @param array $filters
+     * @return Builder
+     */
+    private function applyBaseFilters(Builder $query, array $filters): Builder
     {
-        $salesReport = new SalesReportService(new Order());
+        // Only show completed sales by default
+        if (!isset($filters['status'])) {
+            $query->whereIn('status', ['completed', 'shipped', 'delivered']);
+        }
+        
+        // Exclude refunded orders unless specifically requested
+        if (!isset($filters['include_refunded'])) {
+            $query->where('status', '!=', 'refunded');
+        }
+        
+        return $query;
+    }
 
-        // Get top customers with custom filters
-        $topCustomers = $salesReport->findAll([
-            'searchStrategy' => TopCustomersStrategy::key(),
-            'limit' => 15,
-            'total_spent' => ['operator' => 'gte', 'value' => 1000] // Only customers with $1000+ spent
-        ]);
-
-        // Get products with specific criteria
-        $topProducts = $salesReport->findAll([
-            'searchStrategy' => TopProductsStrategy::key(),
-            'limit' => 20,
-            'total_quantity_sold' => ['operator' => 'gte', 'value' => 50] // Only products with 50+ units sold
-        ]);
-
-        // Get sales data with sorting
-        $salesData = $salesReport->findAll([
-            'searchStrategy' => SalesByDateStrategy::key(),
-            'start_date' => '2024-01-01',
-            'end_date' => '2024-12-31',
-            'sort_by' => 'total_amount',
-            'sort_direction' => 'desc',
-            'limit' => 100
-        ]);
-
-        // Export with custom filters
-        $csvData = $salesReport->export('csv', [
-            'searchStrategy' => TopCustomersStrategy::key(),
-            'total_spent' => ['operator' => 'gte', 'value' => 5000]
-        ], ['customer_name', 'total_spent', 'total_orders']);
-
-        return [
-            'top_customers' => $topCustomers,
-            'top_products' => $topProducts,
-            'sales_data' => $salesData,
-            'csv_export' => $csvData
-        ];
+    /**
+     * Apply grouping to the query for aggregated results.
+     * 
+     * @param Builder $query
+     * @param string $groupBy
+     * @return Builder
+     */
+    private function applyGrouping(Builder $query, string $groupBy): Builder
+    {
+        switch ($groupBy) {
+            case 'customer':
+                $query->selectRaw('customer_id, SUM(total_amount) as total_amount, COUNT(*) as order_count')
+                      ->groupBy('customer_id');
+                break;
+                
+            case 'month':
+                $query->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(total_amount) as total_amount, COUNT(*) as order_count')
+                      ->groupBy('month');
+                break;
+                
+            case 'day':
+                $query->selectRaw('DATE(created_at) as day, SUM(total_amount) as total_amount, COUNT(*) as order_count')
+                      ->groupBy('day');
+                break;
+        }
+        
+        return $query;
     }
 }

@@ -3,6 +3,10 @@
 namespace SgFlores\Cruder\Tests\Services;
 
 use SgFlores\Cruder\BaseCrudService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Services\ExportService;
+use SgFlores\Cruder\Services\SearchService;
+use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
 use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
 use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
@@ -12,21 +16,36 @@ class TestUserService extends BaseCrudService
 {
     public function __construct(User $user)
     {
-        parent::__construct($user);
+        // Create services for testing
+        $eventService = new EventService();
+        
+        // Pass only EventService to BaseCrudService constructor
+        parent::__construct($user, $eventService);
 
-        // Add test event listeners
-        $this->getEventService()->listen('after_create', function ($user) {
+        // Now manually inject the other services into the parent BaseReaderService
+        $searchService = new SearchService();
+        $exportService = new ExportService();
+        $queryLogger = new QueryLogger();
+        
+        // Initialize services with strategies
+        $searchService->addStrategy(LikeSearchStrategy::key(), new LikeSearchStrategy());
+        $exportService->addStrategyByKey(new CsvExportStrategy());
+        $exportService->addStrategyByKey(new JsonExportStrategy());
+        
+        // Manually set the services in the parent BaseReaderService
+        $this->searchService = $searchService;
+        $this->exportService = $exportService;
+        $this->queryLogger = $queryLogger;
+
+        // Add test event listeners (now using static constants)
+        $eventService->listen(EventService::AFTER_CREATE, function ($user) {
             // Simulate sending welcome email
             return $user;
         });
         
-        $this->getEventService()->listen('before_update', function ($data) {
+        $eventService->listen(EventService::BEFORE_UPDATE, function ($data) {
             return $data;
         });
-
-        // add exports
-        $this->getExportService()->addStrategy('csv', new CsvExportStrategy());
-        $this->getExportService()->addStrategy('json', new JsonExportStrategy());
     }
 
     // ========================================================================
@@ -157,5 +176,35 @@ class TestUserService extends BaseCrudService
     public function getDatabaseConnection(): ?string
     {
         return null;
+    }
+
+    public function getSearchParam(): string
+    {
+        return 'search';
+    }
+
+    public function getSortByParam(): string
+    {
+        return 'sort_by';
+    }
+
+    public function getSortDirectionParam(): string
+    {
+        return 'sort_direction';
+    }
+
+    public function getDefaultSortColumn(): string
+    {
+        return 'id';
+    }
+
+    public function getDefaultSortDirection(): string
+    {
+        return 'asc';
+    }
+
+    public function getStrategiesParam(): string
+    {
+        return 'strategies';
     }
 }

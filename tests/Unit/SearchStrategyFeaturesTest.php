@@ -4,6 +4,7 @@ namespace SgFlores\Cruder\Tests\Unit;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Collection;
 use Mockery;
 use SgFlores\Cruder\BaseReaderService;
 use SgFlores\Cruder\Services\SearchService;
@@ -104,176 +105,9 @@ class SearchStrategyFeaturesTest extends TestCase
         $this->assertInstanceOf(Builder::class, $result);
     }
 
-    public function test_strategy_enforcement_mode(): void
-    {
-        // Create a test service that enforces search strategies
-        $testService = new class(new User()) extends BaseReaderService {
-            public function shouldEnforceSearchStrategies(): bool
-            {
-                return true;
-            }
-            
-            public function getDefaultSearchStrategy(): ?string
-            {
-                return LikeSearchStrategy::key();
-            }
-            
-            public function getSearchableColumns(): array
-            {
-                return ['name'];
-            }
-            
-            public function getFilterableColumns(): array
-            {
-                return ['id'];
-            }
-            
-            public function getSortableColumns(): array
-            {
-                return ['name'];
-            }
-        };
-        
-        
-        // Add the like strategy
-        $likeStrategy = new LikeSearchStrategy();
-        $testService->getSearchService()->addStrategy($likeStrategy::key(), $likeStrategy);
-        
-        // Test that strategy enforcement is enabled
-        $this->assertTrue($testService->shouldEnforceSearchStrategies());
-        $this->assertEquals('like', $testService->getDefaultSearchStrategy());
-    }
 
-    public function test_strategy_enforcement_bypasses_default_search(): void
-    {
-        // Create a test service that enforces search strategies
-        $testService = new class(new User()) extends BaseReaderService {
-            public function shouldEnforceSearchStrategies(): bool
-            {
-                return true;
-            }
-            
-            public function getDefaultSearchStrategy(): ?string
-            {
-                return LikeSearchStrategy::key();
-            }
-            
-            public function getSearchableColumns(): array
-            {
-                return ['name'];
-            }
-            
-            public function getFilterableColumns(): array
-            {
-                return ['id'];
-            }
-            
-            public function getSortableColumns(): array
-            {
-                return ['name'];
-            }
-            
-            public function getDirectTextSearchColumns(): array
-            {
-                return ['name'];
-            }
-        };
-        
-        
-        // Add the like strategy
-        $likeStrategy = new LikeSearchStrategy();
-        $testService->getSearchService()->addStrategy($likeStrategy::key(), $likeStrategy);
-        
-        // Test that when strategy enforcement is enabled, it uses the strategy
-        // instead of the default search implementation
-        $this->assertTrue($testService->shouldEnforceSearchStrategies());
-        
-        // The service should have the strategy available
-        $this->assertTrue($testService->getSearchService()->hasStrategy(LikeSearchStrategy::key()));
-    }
 
-    public function test_multiple_strategies_with_enforcement(): void
-    {
-        // Create a test service that enforces search strategies
-        $testService = new class(new User()) extends BaseReaderService {
-            public function shouldEnforceSearchStrategies(): bool
-            {
-                return true;
-            }
-            
-            public function getDefaultSearchStrategy(): ?string
-            {
-                return LikeSearchStrategy::key();
-            }
-            
-            public function getSearchableColumns(): array
-            {
-                return ['name'];
-            }
-            
-            public function getFilterableColumns(): array
-            {
-                return ['id'];
-            }
-            
-            public function getSortableColumns(): array
-            {
-                return ['name'];
-            }
-        };
-        
-        
-        // Add multiple strategies
-        $likeStrategy1 = new LikeSearchStrategy();
-        $likeStrategy2 = new LikeSearchStrategy();
-        
-        $testService->getSearchService()->addStrategy($likeStrategy1::key(), $likeStrategy1);
-        $testService->getSearchService()->addStrategy($likeStrategy2::key(), $likeStrategy2);
-        
-        // Test that multiple strategies can be registered
-        $this->assertTrue($testService->getSearchService()->hasStrategy(LikeSearchStrategy::key()));
-        $this->assertCount(1, $testService->getSearchService()->getAvailableStrategies());
-    }
 
-    public function test_strategy_enforcement_with_custom_strategy(): void
-    {
-        // Create a test service that enforces search strategies
-        $testService = new class(new User()) extends BaseReaderService {
-            public function shouldEnforceSearchStrategies(): bool
-            {
-                return true;
-            }
-            
-            public function getDefaultSearchStrategy(): ?string
-            {
-                return 'custom';
-            }
-            
-            public function getSearchableColumns(): array
-            {
-                return ['name'];
-            }
-            
-            public function getFilterableColumns(): array
-            {
-                return ['id'];
-            }
-            
-            public function getSortableColumns(): array
-            {
-                return ['name'];
-            }
-        };
-        
-        
-        // Add a custom strategy (using the strategy's actual key)
-        $customStrategy = new LikeSearchStrategy();
-        $testService->getSearchService()->addStrategy($customStrategy::key(), $customStrategy);
-        
-        // Test that the custom strategy is used
-        $this->assertEquals('custom', $testService->getDefaultSearchStrategy());
-        $this->assertTrue($testService->getSearchService()->hasStrategy($customStrategy::key()));
-    }
 
     public function test_strategy_key_validation(): void
     {
@@ -285,6 +119,30 @@ class SearchStrategyFeaturesTest extends TestCase
         // Test that the strategy can be added with its key
         $this->searchService->addStrategy($strategy::key(), $strategy);
         $this->assertTrue($this->searchService->hasStrategy($strategy::key()));
+    }
+
+    public function test_strategies_parameter_accepts_array(): void
+    {
+        $strategy = new LikeSearchStrategy();
+        $this->searchService->addStrategy($strategy::key(), $strategy);
+        
+        $filters = ['strategies' => ['like']];
+        
+        // This should not throw an exception
+        $result = $this->searchService->search($strategy::key(), $this->mockQuery, $filters, []);
+        $this->assertInstanceOf(Builder::class, $result);
+    }
+
+    public function test_strategies_parameter_accepts_comma_separated_string(): void
+    {
+        $strategy = new LikeSearchStrategy();
+        $this->searchService->addStrategy($strategy::key(), $strategy);
+        
+        $filters = ['strategies' => 'like'];
+        
+        // This should not throw an exception
+        $result = $this->searchService->search($strategy::key(), $this->mockQuery, $filters, []);
+        $this->assertInstanceOf(Builder::class, $result);
     }
 
     public function test_strategy_with_pagination(): void
@@ -338,5 +196,99 @@ class SearchStrategyFeaturesTest extends TestCase
         $this->expectExceptionMessage("Search strategy 'failing_strategy' not found");
 
         $this->searchService->search('failing_strategy', $this->mockQuery, [], []);
+    }
+
+    public function test_throws_error_when_calling_findAll_with_strategies_without_search_service(): void
+    {
+        // Create a service without SearchService
+        $serviceWithoutSearch = new class(new User()) extends BaseReaderService {
+            public function __construct(User $user)
+            {
+                parent::__construct($user); // No SearchService provided
+            }
+
+            public function getDirectFilterableColumns(): array
+            {
+                return ['id', 'name', 'department_id'];
+            }
+
+            public function getDirectSortableColumns(): array
+            {
+                return ['id', 'name', 'department_id'];
+            }
+
+            public function getSingleRecordRelations(): array
+            {
+                return [];
+            }
+
+            public function getCollectionRelations(): array
+            {
+                return [];
+            }
+
+            public function getSearchParam(): string
+            {
+                return 'search';
+            }
+
+            public function getStrategiesParam(): string
+            {
+                return 'strategies';
+            }
+        };
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('SearchService is required for strategy execution');
+
+        $serviceWithoutSearch->findAll([
+            'strategies' => ['like']
+        ]);
+    }
+
+    public function test_does_not_throw_error_when_calling_findAll_without_strategies(): void
+    {
+        // Create a service without SearchService
+        $serviceWithoutSearch = new class(new User()) extends BaseReaderService {
+            public function __construct(User $user)
+            {
+                parent::__construct($user); // No SearchService provided
+            }
+
+            public function getDirectFilterableColumns(): array
+            {
+                return ['id', 'name', 'department_id'];
+            }
+
+            public function getDirectSortableColumns(): array
+            {
+                return ['id', 'name', 'department_id'];
+            }
+
+            public function getSingleRecordRelations(): array
+            {
+                return [];
+            }
+
+            public function getCollectionRelations(): array
+            {
+                return [];
+            }
+
+            public function getSearchParam(): string
+            {
+                return 'search';
+            }
+
+            public function getStrategiesParam(): string
+            {
+                return 'strategies';
+            }
+        };
+
+        // This should work without throwing an exception since no strategies are provided
+        $result = $serviceWithoutSearch->findAll([]);
+
+        $this->assertInstanceOf(Collection::class, $result);
     }
 }

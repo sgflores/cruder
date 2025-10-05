@@ -13,6 +13,16 @@ use Illuminate\Support\Collection;
 class CsvExportStrategy implements ExportStrategyInterface
 {
     /**
+     * Gets the strategy key.
+     * 
+     * @return string
+     */
+    public static function key(): string
+    {
+        return 'csv';
+    }
+
+    /**
      * Exports data to CSV format.
      * 
      * @param Collection $data The data to export

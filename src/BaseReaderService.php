@@ -4,14 +4,12 @@ namespace SgFlores\Cruder;
 
 use InvalidArgumentException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Support\Facades\Validator;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Services\ExportService;
@@ -19,10 +17,7 @@ use SgFlores\Cruder\Services\SearchService;
 use SgFlores\Cruder\Contracts\ReaderConfigurable;
 use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\LengthAwarePaginator as Paginator;
-use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 
 /**
  * Base Reader Service - Foundation for Read Operations
@@ -79,11 +74,29 @@ use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
  * ## Usage Example
  * 
  * ```php
+ * use SgFlores\Cruder\Services\SearchService;
+ * use SgFlores\Cruder\Services\ExportService;
+ * use SgFlores\Cruder\Services\EventService;
+ * use SgFlores\Cruder\Services\QueryLogger;
+ * 
  * class UserService extends BaseReaderService
  * {
- *     public function __construct(User $model)
+ *     public function __construct(
+ *         User $model,
+ *         SearchService $searchService,
+ *         ExportService $exportService,
+ *         EventService $eventService,
+ *         QueryLogger $queryLogger
+ *     ) {
+ *         parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
+ *         $this->configureServices();
+ *     }
+ * 
+ *     protected function configureServices(): void
  *     {
- *         parent::__construct($model);
+ *         // Configure strategies using key() method pattern
+ *         $this->searchService->addStrategy(LikeSearchStrategy::key(), new LikeSearchStrategy());
+ *         $this->exportService->addStrategyByKey(new CsvExportStrategy());
  *     }
  * 
  *     // Override configuration methods as needed
@@ -113,30 +126,30 @@ abstract class BaseReaderService implements ReaderConfigurable
     /**
      * Search service for managing search strategies.
      * 
-     * @var SearchService
+     * @var SearchService|null
      */
-    protected $searchService;
+    protected ?SearchService $searchService;
 
     /**
      * Export service for managing export strategies.
      * 
-     * @var ExportService
+     * @var ExportService|null
      */
-    protected $exportService;
+    protected ?ExportService $exportService;
 
     /**
      * Event service for managing events.
      * 
-     * @var EventService
+     * @var EventService|null
      */
-    protected $eventService;
+    protected ?EventService $eventService;
 
     /**
      * Query logger for logging database queries.
      * 
-     * @var QueryLogger
+     * @var QueryLogger|null
      */
-    protected $queryLogger;
+    protected ?QueryLogger $queryLogger;
 
     /**
      * Magic column name for counting records.
@@ -149,15 +162,30 @@ abstract class BaseReaderService implements ReaderConfigurable
     /**
      * Constructor - Initializes the Reader Service
      * 
-     * Sets up the service with the provided model and initializes all required dependencies.
-     * The service automatically configures default strategies and services.
+     * Sets up the service with the provided model and optional dependencies.
+     * Services are injected through dependency injection for better flexibility.
+     * Child classes can override configureServices() to add custom strategies.
      * 
      * @param Model $model The Eloquent model instance this service will operate on
+     * @param SearchService|null $searchService Optional search service instance
+     * @param ExportService|null $exportService Optional export service instance
+     * @param EventService|null $eventService Optional event service instance
+     * @param QueryLogger|null $queryLogger Optional query logger instance
      */
-    public function __construct(Model $model)
-    {
+    public function __construct(
+        Model $model,
+        ?SearchService $searchService = null,
+        ?ExportService $exportService = null,
+        ?EventService $eventService = null,
+        ?QueryLogger $queryLogger = null
+    ) {
         $this->model = $model;
-        $this->initializeServices();
+        $this->searchService = $searchService;
+        $this->exportService = $exportService;
+        $this->eventService = $eventService;
+        $this->queryLogger = $queryLogger;
+        
+        $this->configureServices();
     }
     
     /**
@@ -174,42 +202,12 @@ abstract class BaseReaderService implements ReaderConfigurable
     }
 
     /**
-     * Initializes all service dependencies and strategies.
-     * 
-     * Sets up the search, export, event, and query logging services with their
-     * default configurations. Child classes can override configureServices()
-     * to add custom strategies or modify service behavior.
-     * 
-     * @return void
-     */
-    protected function initializeServices(): void
-    {
-        $this->searchService = new SearchService();
-        $this->exportService = new ExportService();
-        $this->eventService = new EventService();
-        $this->queryLogger = new QueryLogger();
-        
-        $this->configureDefaultStrategies();
-        $this->configureServices();
-    }
-
-    /**
-     * Configures default strategies for search.
-     * 
-     * @return void
-     */
-    protected function configureDefaultStrategies(): void
-    {
-        // Add default search strategy using its static key
-        $likeStrategy = new LikeSearchStrategy();
-        $this->searchService->addStrategy($likeStrategy::key(), $likeStrategy);
-    }
-
-    /**
      * Configures custom services and strategies.
      * 
      * Override this method in child classes to add custom strategies,
-     * hooks, or modify service behavior.
+     * hooks, or modify service behavior. This method is called after
+     * service validation and allows child classes to configure their
+     * specific needs.
      * 
      * @return void
      */
@@ -217,7 +215,17 @@ abstract class BaseReaderService implements ReaderConfigurable
     {
         // Base implementation does nothing.
         // Override in child classes to add custom configuration.
-        // example: add additional hooks, services, etc.
+        // 
+        // Example:
+        // public function configureServices(): void
+        // {
+        //     parent::configureServices();
+        //     $this->searchService->addStrategy('custom', new CustomSearchStrategy());
+        //     $this->eventService->listen(EventService::BEFORE_FIND, function($data) {
+        //     // Custom logic here
+        //     });
+        //
+        // }
     }
 
     // ========================================================================
@@ -238,25 +246,18 @@ abstract class BaseReaderService implements ReaderConfigurable
      * - Performance monitoring
      * - Custom search strategies
      * 
-     * @param array $filters Query options including paginate, limit, search, sort_by, sort_direction, and column filters
+     * @param array $filters Query options including paginate, limit, search, sort_by, sort_direction, strategies, and column filters
      * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
-     * @param string|null $searchStrategy Optional search strategy to use for filtering
      * @return Collection|LengthAwarePaginator Collection of models or paginated results
      */
-    public function findAll(array $filters = [], $withRelations = null, ?string $searchStrategy = null): Collection|LengthAwarePaginator
+    public function findAll(array $filters = [], $withRelations = null): Collection|LengthAwarePaginator
     {
-        // Add search strategy to filters if provided
-        if ($searchStrategy !== null) {
-            $filters[$this->getSearchStrategyParam()] = $searchStrategy;
-        }
         
-        // If strategy enforcement is enabled, bypass default implementation and use strategy only
-        if ($this->shouldEnforceSearchStrategies()) {
-            return $this->executeStrategyOnly($filters, $withRelations);
-        }
 
         // Fire before_find event for hooks
-        $this->eventService->fire('before_find', $filters);
+        if ($this->eventService) {
+            $this->eventService->fire(EventService::BEFORE_FIND, $filters);
+        }
         
         // Determine if result should be paginated
         $isPaginated = isset($filters[$this->getPaginateParam()]) || isset($filters[$this->getLimitParam()]);
@@ -290,17 +291,21 @@ abstract class BaseReaderService implements ReaderConfigurable
 
         // Log query performance for debugging
         $executionTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
-        $this->queryLogger->logQuery('find', $query, $executionTime, [
-            'filters' => $filters,
-            'is_paginated' => $isPaginated,
-            'result_count' => $result instanceof \Illuminate\Support\Collection ? $result->count() : 'paginated'
-        ]);
+        if ($this->queryLogger) {
+            $this->queryLogger->logQuery('find', $query, $executionTime, [
+                'filters' => $filters,
+                'is_paginated' => $isPaginated,
+                'result_count' => $result instanceof \Illuminate\Support\Collection ? $result->count() : 'paginated'
+            ]);
+        }
 
         // Transform response (e.g., API resources)
         $result = $this->transformResponse($result, $filters);
         
         // Fire after_find event for hooks
-        $this->eventService->fire('after_find', $result);
+        if ($this->eventService) {
+            $this->eventService->fire(EventService::AFTER_FIND, $result);
+        }
         return $result;
     }
 
@@ -356,154 +361,48 @@ abstract class BaseReaderService implements ReaderConfigurable
         $executionTime = (microtime(true) - $startTime) * 1000;
         
         // Log query for debugging
-        $this->queryLogger->logQuery('count', $query, $executionTime, [
-            'filters' => $filters,
-            'include_soft_deleted' => $includeSoftDeleted,
-            'count' => $count
-        ]);
+        if ($this->queryLogger) {
+            $this->queryLogger->logQuery('count', $query, $executionTime, [
+                'filters' => $filters,
+                'include_soft_deleted' => $includeSoftDeleted,
+                'count' => $count
+            ]);
+        }
         
         return $count;
     }
 
-    /**
-     * Executes only the specified search strategy or strategies, bypassing all default reader logic.
-     *
-     * This method is intended for use when strategy enforcement is enabled. It will:
-     * - Use the specified search strategy/strategies, or fall back to the default if none are specified.
-     * - Allow each strategy to initialize its own query builder (including Eloquent or raw DB queries).
-     * - Execute the strategy/strategies and return the result directly.
-     * - With pagination and limit if specified
-     *
-     * @param array $filters Query options and parameters to pass to the strategy/strategies.
-     * @param mixed $withRelations Relations to eager load (if applicable to the strategy).
-     * @return \Illuminate\Support\Collection|\Illuminate\Contracts\Pagination\LengthAwarePaginator
-     *         The result returned by the executed strategy/strategies.
-     * @throws \InvalidArgumentException If no strategy is specified or found.
-     */
-    protected function executeStrategyOnly(array $filters, $withRelations = null): Collection|LengthAwarePaginator
-    {
-        // Determine which strategies to use (enforce default in strategy enforcement mode)
-        $strategies = $this->resolveStrategiesToExecute($filters, true);
-        
-        if (empty($strategies)) {
-            $availableStrategies = $this->searchService->getAvailableStrategies();
-            throw new InvalidArgumentException(
-                'No search strategy specified and no default strategy configured. ' .
-                'Available strategies: ' . implode(', ', $availableStrategies)
-            );
-        }
-        
-        // Fire before_find event for hooks
-        $this->eventService->fire('before_find', $filters);
-        
-        // Execute strategies with null query (allows strategies to initialize their own builders)
-        $result = $this->executeMultipleStrategies(null, $filters, $strategies);
-        
-        // Execute the query to get the actual result
-        if ($result instanceof Builder) {
-            // Apply relations if needed for Eloquent builders
-            if ($withRelations !== false) {
-                $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getCollectionRelations());
-                if (!empty($relationsToLoad)) {
-                    $result->with($relationsToLoad);
-                }
-            }
-            
-            // Handle pagination for Eloquent builders
-            if (isset($filters[$this->getPaginateParam()]) && !is_array($filters[$this->getPaginateParam()])) {
-                $perPage = (int) $filters[$this->getPaginateParam()];
-                if ($perPage <= 0) {
-                    throw new InvalidArgumentException("Pagination parameter must be a positive integer, got: {$perPage}");
-                }
-                $finalResult = $result->paginate($perPage);
-            } elseif (isset($filters[$this->getLimitParam()]) && !is_array($filters[$this->getLimitParam()])) {
-                $limit = (int) $filters[$this->getLimitParam()];
-                if ($limit <= 0) {
-                    throw new InvalidArgumentException("Limit parameter must be a positive integer, got: {$limit}");
-                }
-                $finalResult = $result->limit($limit)->get();
-            } else {
-                $finalResult = $result->get();
-            }
-        } elseif ($result instanceof QueryBuilder) {
-            // Handle pagination for QueryBuilder
-            if (isset($filters[$this->getPaginateParam()]) && !is_array($filters[$this->getPaginateParam()])) {
-                // QueryBuilder doesn't support pagination directly, so we need to implement manual pagination
-                $perPage = (int) $filters[$this->getPaginateParam()];
-                if ($perPage <= 0) {
-                    throw new InvalidArgumentException("Pagination parameter must be a positive integer, got: {$perPage}");
-                }
-                $page = (int) ($filters['page'] ?? 1);
-                if ($page <= 0) {
-                    throw new InvalidArgumentException("Page parameter must be a positive integer, got: {$page}");
-                }
-                $offset = ($page - 1) * $perPage;
-                
-                // Get total count
-                $totalCount = $result->count();
-                
-                // Get paginated results
-                $items = $result->offset($offset)->limit($perPage)->get();
-                
-                // Create a simple paginator-like object
-                $finalResult = new Paginator(
-                    $items,
-                    $totalCount,
-                    $perPage,
-                    $page,
-                    ['path' => request()->url() ?? url()->current(), 'pageName' => 'page']
-                );
-            } elseif (isset($filters[$this->getLimitParam()]) && !is_array($filters[$this->getLimitParam()])) {
-                $limit = (int) $filters[$this->getLimitParam()];
-                if ($limit <= 0) {
-                    throw new InvalidArgumentException("Limit parameter must be a positive integer, got: {$limit}");
-                }
-                $finalResult = collect($result->limit($limit)->get());
-            } else {
-                $finalResult = collect($result->get());
-            }
-        }
-        
-        // Fire after_find event for hooks
-        $this->eventService->fire('after_find', $finalResult);
-        
-        return $finalResult;
-    }
 
     /**
-     * Resolves which strategies to execute based on filters and configuration.
+     * Resolves which strategies to execute based on filters.
      * 
      * @param array $filters Query options
-     * @param bool $enforceDefault Whether to enforce default strategy when none specified
      * @return array Array of strategy names to execute
      * @throws InvalidArgumentException If invalid strategies are specified
      */
-    protected function resolveStrategiesToExecute(array $filters, bool $enforceDefault = false): array
+    protected function resolveStrategiesToExecute(array $filters): array
     {
         $strategies = [];
         
-        // Check if multiple strategies are specified
-        if ($this->shouldAllowMultipleSearchStrategies() && isset($filters[$this->getStrategiesParam()])) {
-            $strategyString = $filters[$this->getStrategiesParam()];
+        // Check if strategies are specified
+        if (isset($filters[$this->getStrategiesParam()])) {
+            $strategyValue = $filters[$this->getStrategiesParam()];
             
-            if (is_string($strategyString)) {
-                $strategies = array_filter(array_map('trim', explode(',', $strategyString)), fn($s) => !empty($s));
-            } elseif (is_array($strategyString)) {
-                $strategies = array_filter($strategyString, fn($s) => !empty($s));
+            if (is_string($strategyValue)) {
+                // Handle comma-separated string
+                $strategies = array_filter(array_map('trim', explode(',', $strategyValue)), fn($s) => !empty($s));
+            } elseif (is_array($strategyValue)) {
+                // Handle array
+                $strategies = array_filter($strategyValue, fn($s) => !empty($s));
             }
         }
         
-        // If no multiple strategies specified, use single strategy
-        if (empty($strategies)) {
-            $singleStrategy = $filters[$this->getSearchStrategyParam()] ?? null;
-            
-            // Only use default strategy if enforceDefault is true or in strategy enforcement mode
-            if ($singleStrategy || ($enforceDefault && $this->getDefaultSearchStrategy())) {
-                $strategyToUse = $singleStrategy ?: $this->getDefaultSearchStrategy();
-                if (!empty($strategyToUse)) {
-                    $strategies = [$strategyToUse];
-                }
-            }
+        // Validate SearchService is available
+        if ($strategies && !$this->searchService) {
+            throw new InvalidArgumentException(
+                'SearchService is required for strategy execution. ' .
+                'Inject SearchService in constructor: new ' . get_class($this) . '($model, $searchService)'
+            );
         }
         
         // Validate all strategies exist
@@ -532,7 +431,7 @@ abstract class BaseReaderService implements ReaderConfigurable
     protected function executeMultipleStrategies(Builder|QueryBuilder|null $query, array $filters, array $strategies): Builder|QueryBuilder
     {
         if (count($strategies) === 1) {
-            // Single strategy - execute directly (allows strategy to initialize its own query)
+            // Single strategy - execute directly
             return $this->executeStrategyWithErrorHandling($strategies[0], $query, $filters, [
                 'term' => $filters[$this->getSearchParam()] ?? '',
                 'direct_columns' => $this->getDirectTextSearchColumns(),
@@ -1196,7 +1095,6 @@ abstract class BaseReaderService implements ReaderConfigurable
             $this->getSortDirectionParam(),
             $this->getPaginateParam(),
             $this->getLimitParam(),
-            $this->getSearchStrategyParam(),
             $this->getStrategiesParam(),
             static::MAGIC_COUNT
         ]);
@@ -1244,6 +1142,13 @@ abstract class BaseReaderService implements ReaderConfigurable
      */
     public function export(string $format, array $filters = [], array $columns = [], array $options = []): string
     {
+        if (!$this->exportService) {
+            throw new InvalidArgumentException(
+                'ExportService is required for export functionality. ' .
+                'Inject ExportService in constructor: new ' . get_class($this) . '($model, null, $exportService)'
+            );
+        }
+        
         $data = $this->getDataForExport($filters, $columns);
         $exportOptions = array_merge(['columns' => $columns], $options);
         
@@ -1276,21 +1181,28 @@ abstract class BaseReaderService implements ReaderConfigurable
     /**
      * Adds an event listener for a specific operation.
      * 
-     * @param string $event The event name (e.g., 'before_find', 'after_find')
+     * @param string $event The event name (e.g., EventService::BEFORE_FIND, EventService::AFTER_FIND)
      * @param callable $listener The listener function
      * @return void
      */
     public function addEventListener(string $event, callable $listener): void
     {
+        if (!$this->eventService) {
+            throw new InvalidArgumentException(
+                'EventService is required for event functionality. ' .
+                'Inject EventService in constructor: new ' . get_class($this) . '($model, null, null, $eventService)'
+            );
+        }
+        
         $this->eventService->listen($event, $listener);
     }
 
     /**
      * Gets the search service instance.
      * 
-     * @return SearchService The search service
+     * @return SearchService|null The search service or null if not injected
      */
-    public function getSearchService(): SearchService
+    public function getSearchService(): ?SearchService
     {
         return $this->searchService;
     }
@@ -1299,9 +1211,9 @@ abstract class BaseReaderService implements ReaderConfigurable
     /**
      * Gets the export service instance.
      * 
-     * @return ExportService The export service
+     * @return ExportService|null The export service or null if not injected
      */
-    public function getExportService(): ExportService
+    public function getExportService(): ?ExportService
     {
         return $this->exportService;
     }
@@ -1309,9 +1221,9 @@ abstract class BaseReaderService implements ReaderConfigurable
     /**
      * Gets the event service instance.
      * 
-     * @return EventService The event service
+     * @return EventService|null The event service or null if not injected
      */
-    public function getEventService(): EventService
+    public function getEventService(): ?EventService
     {
         return $this->eventService;
     }
@@ -1319,9 +1231,9 @@ abstract class BaseReaderService implements ReaderConfigurable
     /**
      * Gets the query logger instance.
      * 
-     * @return QueryLogger The query logger
+     * @return QueryLogger|null The query logger or null if not injected
      */
-    public function getQueryLogger(): QueryLogger
+    public function getQueryLogger(): ?QueryLogger
     {
         return $this->queryLogger;
     }

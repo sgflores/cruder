@@ -13,6 +13,13 @@ use Illuminate\Support\Collection;
 interface ExportStrategyInterface
 {
     /**
+     * Gets the unique key identifier for this strategy.
+     * 
+     * @return string The strategy key
+     */
+    public static function key(): string;
+
+    /**
      * Exports data in the specific format.
      * 
      * @param Collection $data The data to export

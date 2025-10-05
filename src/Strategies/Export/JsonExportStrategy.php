@@ -13,6 +13,16 @@ use Illuminate\Support\Collection;
 class JsonExportStrategy implements ExportStrategyInterface
 {
     /**
+     * Gets the strategy key.
+     * 
+     * @return string
+     */
+    public static function key(): string
+    {
+        return 'json';
+    }
+
+    /**
      * Exports data to JSON format.
      * 
      * @param Collection $data The data to export

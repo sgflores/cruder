@@ -16,6 +16,11 @@ class CsvExportStrategyTest extends UnitTestCase
         $this->strategy = new CsvExportStrategy();
     }
 
+    public function test_key_returns_csv(): void
+    {
+        $this->assertEquals('csv', CsvExportStrategy::key());
+    }
+
     public function test_export_empty_collection(): void
     {
         $data = collect([]);
