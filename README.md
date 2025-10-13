@@ -99,14 +99,6 @@ class UserService extends BaseCrudService
 ### 2. Basic Usage
 
 ```php
-use SgFlores\Cruder\Services\EventService;
-use SgFlores\Cruder\Services\ValidationService;
-
-// Create service with proper dependency injection
-$eventService = new EventService();
-$validationService = new ValidationService();
-$userService = new UserService(new User(), $eventService, $validationService);
-
 // Find all users with filtering and pagination
 $users = $userService->findAll([
     'search' => 'john',
@@ -116,7 +108,7 @@ $users = $userService->findAll([
     'limit' => 10
 ]);
 
-// Find user by ID
+// Find user by ID and load department relation
 $user = $userService->findById(1, ['department']);
 
 // Create user
@@ -144,11 +136,10 @@ $userService->bulkCreate([
 
 ### 3. Search Strategies
 
-Create custom search implementations for complex reporting and analytics using the new strategy pattern.
+Create custom search implementations for complex reporting and analytics using the strategy pattern.
 
 **Key Features:**
-- **Custom Search Strategies** - Pluggable strategies using the `key()` method pattern
-- **Strategy Registration** - Use `Strategy::key()` for consistent strategy registration
+- **Custom Search Strategies** - Pluggable strategies
 - **Query Type Flexibility** - Support both Eloquent Builder and QueryBuilder
 - **Proper Service Injection** - Extend `BaseReaderService` with `SearchService` injected
 
@@ -161,7 +152,7 @@ class TopOrdersStrategy implements SearchStrategyInterface
         return 'top_orders';
     }
     
-    public function search(Builder $query, array $filters, array $config): Builder
+    public function search(Builder|QueryBuilder|null $query, array $filters, array $config = []): Builder|QueryBuilder
     {
         return $query->orderBy('total_amount', 'desc');
     }
