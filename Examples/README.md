@@ -5,10 +5,9 @@ This directory contains comprehensive examples demonstrating how to use the `Bas
 ## 📁 Available Examples
 
 ### 1. **SimpleSalesExample.php** - Basic Usage with Dependency Injection
-A straightforward example showing the core functionality of both services with proper dependency injection patterns.
+A straightforward example showing the core functionality of both services.
 
 **What it demonstrates:**
-- Proper Laravel dependency injection with concrete services
 - Basic CRUD operations (Create, Read, Update, Delete)
 - Event-driven business logic with EventService
 - Validation with ValidationService
@@ -36,22 +35,20 @@ A comprehensive example of a complete sales and inventory management system with
 Demonstrates how to create a reporting service with custom search strategies using the new strategy pattern.
 
 **What it demonstrates:**
-- Custom search strategies with `key()` method pattern
+- Custom search strategies
 - TopOrdersStrategy for finding top performing orders
 - TopSalesStrategy for finding top sales by various criteria
-- Proper dependency injection with concrete services
 - Event-driven reporting with EventService
 - Export capabilities for reports
-- Strategy registration using `Strategy::key()`
+- Strategy registration
 
 **File:** [SalesReportService.php](SalesReportService.php)
 
 ### 4. **ProductExample.php** - Custom Validation Strategy
-Shows how to implement custom validation strategies with proper dependency injection.
+Shows how to implement custom validation strategies.
 
 **What it demonstrates:**
 - Custom validation strategy implementation
-- Proper dependency injection with EventService and ValidationService
 - Array-based validation rules
 - Business rule validation
 - Conditional validation logic
@@ -64,40 +61,31 @@ Demonstrates how to export data using both default and custom export strategies 
 
 **What it demonstrates:**
 - Full service integration for export functionality
-- Default JSON and CSV export strategies using `key()` method
+- Default JSON and CSV export strategies
 - Custom XML export strategy implementation
-- Using BaseReaderService built-in export functionality
-- Custom export options and formatting
-- Export strategy registration using `addStrategyByKey()`
 
 **File:** [ExportExample.php](ExportExample.php)
 
 
 ## 📋 Key Concepts Demonstrated
 
-### 1. **Proper Dependency Injection**
-All examples demonstrate proper Laravel dependency injection patterns with concrete services rather than optional ones.
-
-### 2. **Service Configuration**
+### 1. **Service Configuration**
 Each service class extends either `BaseCrudService` or `BaseReaderService` and defines column constants for security and validation.
 
-### 3. **Basic CRUD Operations**
+### 2. **Basic CRUD Operations**
 Complete Create, Read, Update, Delete operations with proper error handling and validation using injected services.
 
-### 4. **Search and Filtering**
+### 3. **Search and Filtering**
 Advanced search capabilities including text search, price ranges, date filtering, and pagination with SearchService.
 
-### 5. **Data Export**
-Flexible export functionality with multiple formats (JSON, CSV, XML) using ExportService and the new `key()` method pattern.
+### 4. **Data Export**
+Flexible export functionality with multiple formats (JSON, CSV, XML).
 
-### 6. **Event-Driven Relationships**
+### 5. **Event-Driven Relationships**
 Using the built-in event system with EventService to handle complex relationships and business logic automatically.
 
-### 7. **Custom Search Strategies**
-Pluggable search strategies using the new `Strategy::key()` method pattern for complex reporting queries and data analysis.
-
-### 8. **Per-Use Service Validation**
-Services validate their dependencies at runtime and provide clear error messages when required services are not injected.
+### 6. **Custom Search Strategies**
+Pluggable search strategies for complex reporting queries and data analysis.
 
 ## 🔧 Advanced Features
 
@@ -108,12 +96,9 @@ The services automatically validate that only declared columns can be used for f
 Built-in query logging with QueryLogger, caching, and chunked processing for optimal performance.
 
 ### 3. **Strategy Pattern Implementation**
-Custom search and export strategies using the `key()` method pattern for better maintainability and type safety.
+Custom search and export strategies for better maintainability and type safety.
 
-### 4. **Event System with Static Constants**
-All events use static constants from EventService (e.g., `EventService::BEFORE_CREATE`) for better IDE support and type safety.
-
-### 5. **Per-Use Service Validation**
+### 4. **Per-Use Service Validation**
 Services validate their dependencies at runtime and provide clear error messages when required services are not injected.
 
 ## 📊 Business Logic Patterns
