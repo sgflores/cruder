@@ -42,7 +42,7 @@ class QueryLoggingTest extends TestCase
             ->atLeast()->once();
         
         Log::shouldReceive('channel')
-            ->with('single')
+            ->with('daily')
             ->andReturn($mockChannel);
         
         // Perform an operation that should trigger logging
@@ -74,7 +74,7 @@ class QueryLoggingTest extends TestCase
         $mockChannel->shouldReceive('debug')->never();
         
         Log::shouldReceive('channel')
-            ->with('single')
+            ->with('daily')
             ->andReturn($mockChannel);
         
         $this->userService->findAll();
@@ -96,7 +96,7 @@ class QueryLoggingTest extends TestCase
             ->once();
         
         Log::shouldReceive('channel')
-            ->with('single')
+            ->with('daily')
             ->andReturn($mockChannel);
         
         $this->userService->create([
@@ -122,7 +122,7 @@ class QueryLoggingTest extends TestCase
             ->atLeast()->once();
         
         Log::shouldReceive('channel')
-            ->with('single')
+            ->with('daily')
             ->andReturn($mockChannel);
         
         // Perform an operation that should be considered slow
@@ -147,7 +147,7 @@ class QueryLoggingTest extends TestCase
             ->atLeast()->once();
         
         Log::shouldReceive('channel')
-            ->with('single')
+            ->with('daily')
             ->andReturn($mockChannel);
         
         // Perform an operation
@@ -172,7 +172,7 @@ class QueryLoggingTest extends TestCase
             ->atLeast()->once();
         
         Log::shouldReceive('channel')
-            ->with('single')
+            ->with('daily')
             ->andReturn($mockChannel);
         
         // Perform an operation
@@ -199,7 +199,7 @@ class QueryLoggingTest extends TestCase
             ->atLeast()->once();
         
         Log::shouldReceive('channel')
-            ->with('single')
+            ->with('daily')
             ->andReturn($mockChannel);
         
         // Perform an operation
@@ -230,7 +230,7 @@ class QueryLoggingTest extends TestCase
             ->atLeast()->times(4);
         
         Log::shouldReceive('channel')
-            ->with('single')
+            ->with('daily')
             ->andReturn($mockChannel);
         
         // Test all CRUD operations

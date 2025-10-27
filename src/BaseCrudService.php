@@ -15,6 +15,9 @@ use SgFlores\Cruder\Traits\PerformanceMonitoringTrait;
 use SgFlores\Cruder\Exceptions\ValidationException as CruderValidationException;
 use SgFlores\Cruder\Strategies\Validation\ValidationStrategyInterface;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use SgFlores\Cruder\Services\ExportService;
+use SgFlores\Cruder\Services\QueryLogger;
+use SgFlores\Cruder\Services\SearchService;
 
 /**
  * Base CRUD Service - Complete CRUD Operations Foundation
@@ -146,14 +149,20 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
      * 
      * @param Model $model The Eloquent model instance this service will operate on
      * @param EventService|null $eventService Optional event service instance
-     * @param ValidationService|null $validationService Optional validation service instance
+     * @param ValidationService|null $validationService Optional validation service 
+     * @param SearchService|null $searchService Optional search service instance
+     * @param ExportService|null $exportService Optional export service instance
+     * @param QueryLogger|null $queryLogger Optional query logger instance
      */
     public function __construct(
         Model $model,
         ?EventService $eventService = null,
-        ?ValidationService $validationService = null
+        ?ValidationService $validationService = null,
+        ?SearchService $searchService = null,
+        ?ExportService $exportService = null,
+        ?QueryLogger $queryLogger = null
     ) {
-        parent::__construct($model, null, null, $eventService);
+        parent::__construct($model, $searchService, $exportService, $eventService, $queryLogger);
         $this->validationService = $validationService ?? new ValidationService();
     }
 
