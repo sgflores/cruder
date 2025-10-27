@@ -92,14 +92,14 @@ class TestUserService extends BaseCrudService
         return ['department', 'createdBy', 'updatedBy'];
     }
 
-    public function getPaginateParam(): string
+    public function getPageParam(): string
     {
-        return 'paginate';
+        return 'page';
     }
 
-    public function getLimitParam(): string
+    public function getPerPageParam(): string
     {
-        return 'limit';
+        return 'per_page';
     }
 
     public function isAuditTrailEnabled(): bool

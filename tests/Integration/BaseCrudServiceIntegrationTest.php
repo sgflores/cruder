@@ -72,7 +72,7 @@ class BaseCrudServiceIntegrationTest extends TestCase
         $this->assertCount(5, $sortedUsers);
         
         // 5. Test pagination
-        $paginatedUsers = $this->userService->findAll(['paginate' => 3]);
+        $paginatedUsers = $this->userService->findAll(['per_page' => 3]);
         $this->assertEquals(3, $paginatedUsers->perPage());
         $this->assertEquals(5, $paginatedUsers->total());
         

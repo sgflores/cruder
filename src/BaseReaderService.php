@@ -252,18 +252,20 @@ abstract class BaseReaderService implements ReaderConfigurable
      */
     public function findAll(array $filters = [], $withRelations = null): Collection|LengthAwarePaginator
     {
-        
-
         // Fire before_find event for hooks
         if ($this->eventService) {
             $this->eventService->fire(EventService::BEFORE_FIND, $filters);
         }
         
         // Determine if result should be paginated
-        $isPaginated = isset($filters[$this->getPaginateParam()]) || isset($filters[$this->getLimitParam()]);
+        $isPaginated = isset($filters[$this->getPageParam()]) || isset($filters[$this->getPerPageParam()]);
+        
+        // Determine if limit is being used (skip eager loading to avoid limit issues)
+        $isLimited = isset($filters[$this->getLimitParam()]) && !is_array($filters[$this->getLimitParam()]);
 
         // Resolve which relations to eager load
-        $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getCollectionRelations());
+        // Skip eager loading when limit is used to avoid issues with limit
+        $relationsToLoad = $isLimited ? [] : $this->resolveRelationsToLoad($withRelations, $this->getCollectionRelations());
         $query = $this->createQueryBuilder()->with($relationsToLoad);
         
         // Apply all filters (search, sorting, column filters, etc.)
@@ -275,14 +277,23 @@ abstract class BaseReaderService implements ReaderConfigurable
         $startTime = microtime(true);
 
         // Use caching for non-paginated queries if enabled
-        if ($this->isQueryCacheEnabled() && !$isPaginated) {
+        // Don't cache when limit is used to avoid bypassing the limit
+        if ($this->isQueryCacheEnabled() && !$isPaginated && !$isLimited) {
             $cacheKey = $this->buildCacheKey($filters, 'all');
             $result = Cache::remember($cacheKey, $this->getCacheLifetimeSeconds(), fn() => $query->get());
         } else {
-            // Execute query with pagination or limit if specified
-            if (isset($filters[$this->getPaginateParam()]) && !is_array($filters[$this->getPaginateParam()])) {
-                $result = $query->paginate($filters[$this->getPaginateParam()]);
+            // Execute query with pagination if specified
+            if (isset($filters[$this->getPerPageParam()]) && !is_array($filters[$this->getPerPageParam()])) {
+                $perPage = $filters[$this->getPerPageParam()];
+                $page = $filters[$this->getPageParam()] ?? null;
+                
+                if ($page !== null && !is_array($page)) {
+                    $result = $query->paginate($perPage, ['*'], 'page', $page);
+                } else {
+                    $result = $query->paginate($perPage);
+                }
             } elseif (isset($filters[$this->getLimitParam()]) && !is_array($filters[$this->getLimitParam()])) {
+                // Limit query without pagination
                 $result = $query->limit($filters[$this->getLimitParam()])->get();
             } else {
                 $result = $query->get();
@@ -1093,7 +1104,8 @@ abstract class BaseReaderService implements ReaderConfigurable
             $this->getSearchParam(),
             $this->getSortByParam(),
             $this->getSortDirectionParam(),
-            $this->getPaginateParam(),
+            $this->getPageParam(),
+            $this->getPerPageParam(),
             $this->getLimitParam(),
             $this->getStrategiesParam(),
             static::MAGIC_COUNT

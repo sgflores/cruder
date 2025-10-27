@@ -131,7 +131,7 @@ class CacheTest extends TestCase
     {
         // Since we can't use shouldNotReceive with ArrayStore, we'll test the behavior
         // by ensuring the result is paginated (which means cache was bypassed)
-        $result = $this->userService->findAll(['paginate' => 10]);
+        $result = $this->userService->findAll(['per_page' => 10]);
 
         $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
     }

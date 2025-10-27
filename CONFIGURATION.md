@@ -65,11 +65,14 @@ public function getSortByParam(): string          // Default: 'sort_by'
 public function getSortDirectionParam(): string   // Default: 'sort_direction'
 // Returns the URL parameter name for sort direction (asc/desc)
 
-public function getPaginateParam(): string        // Default: 'page'
-// Returns the URL parameter name for pagination
+public function getPageParam(): string           // Default: 'page'
+// Returns the URL parameter name for page number
+
+public function getPerPageParam(): string         // Default: 'per_page'
+// Returns the URL parameter name for items per page
 
 public function getLimitParam(): string           // Default: 'limit'
-// Returns the URL parameter name for limiting results per page
+// Returns the URL parameter name for limiting results (non-paginated collection)
 ```
 
 ### Relations
@@ -478,8 +481,9 @@ $cacheLifetime = $service->getCacheLifetimeSeconds();
 - `getSearchParam()` - URL parameter for text search
 - `getSortByParam()` - URL parameter for sort column
 - `getSortDirectionParam()` - URL parameter for sort direction
-- `getPaginateParam()` - URL parameter for pagination
-- `getLimitParam()` - URL parameter for result limit
+- `getPageParam()` - URL parameter for page number
+- `getPerPageParam()` - URL parameter for items per page
+- `getLimitParam()` - URL parameter for result limit (non-paginated)
 
 ### Column Configuration
 - `getDirectFilterableColumns()` - Main table columns for filtering
