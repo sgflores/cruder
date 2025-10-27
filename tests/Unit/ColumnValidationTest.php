@@ -303,12 +303,12 @@ class ColumnValidationTest extends TestCase
 
     public function test_ignores_reserved_parameters(): void
     {
+        // Test with per_page (paginated result)
         $result = $this->userService->findAll([
             'search' => 'test',
             'sort_by' => 'name',
             'sort_direction' => 'asc',
-            'paginate' => 10,
-            'limit' => 5
+            'per_page' => 10
         ]);
         
         $this->assertInstanceOf(LengthAwarePaginator::class, $result);

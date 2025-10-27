@@ -39,15 +39,23 @@ interface ReaderConfigurable
     public function getSortDirectionParam(): string;
     
     /**
-     * Query parameter key for pagination size.
+     * Query parameter key for page number.
      * 
-     * @example 'page' for ?page=20
+     * @example 'page' for ?page=3
      * @return string
      */
-    public function getPaginateParam(): string;
+    public function getPageParam(): string;
     
     /**
-     * Query parameter key for result limit.
+     * Query parameter key for items per page.
+     * 
+     * @example 'per_page' for ?per_page=25
+     * @return string
+     */
+    public function getPerPageParam(): string;
+    
+    /**
+     * Query parameter key for result limit (non-paginated collection).
      * 
      * @example 'limit' for ?limit=10
      * @return string

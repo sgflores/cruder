@@ -97,7 +97,7 @@ class SearchStrategyIntegrationTest extends TestCase
         // Test search with pagination
         $paginatedResults = $this->userService->findAll([
             'search' => 'User',
-            'paginate' => 5
+            'per_page' => 5
         ]);
 
         $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $paginatedResults);
@@ -227,7 +227,7 @@ class SearchStrategyIntegrationTest extends TestCase
         // Test pagination performance
         $paginatedResults = $this->userService->findAll([
             'search' => 'User',
-            'paginate' => 20
+            'per_page' => 20
         ]);
         $this->assertEquals(20, $paginatedResults->perPage());
         $this->assertEquals(100, $paginatedResults->total());

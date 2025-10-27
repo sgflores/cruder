@@ -39,8 +39,8 @@ class ConfigurationTraitTest extends TestCase
         $this->assertEquals('search', $this->userService->getSearchParam());
         $this->assertEquals('sort_by', $this->userService->getSortByParam());
         $this->assertEquals('sort_direction', $this->userService->getSortDirectionParam());
-        $this->assertEquals('paginate', $this->userService->getPaginateParam());
-        $this->assertEquals('limit', $this->userService->getLimitParam());
+        $this->assertEquals('page', $this->userService->getPageParam());
+        $this->assertEquals('per_page', $this->userService->getPerPageParam());
         $this->assertEquals('id', $this->userService->getDefaultSortColumn());
         $this->assertEquals('asc', $this->userService->getDefaultSortDirection());
         $this->assertTrue($this->userService->isQueryCacheEnabled());

@@ -239,7 +239,7 @@ class BaseCrudServiceTest extends TestCase
             ]);
         }
 
-        $paginatedUsers = $this->userService->findAll(['paginate' => 3]);
+        $paginatedUsers = $this->userService->findAll(['per_page' => 3]);
 
         $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $paginatedUsers);
         $this->assertEquals(3, $paginatedUsers->perPage());

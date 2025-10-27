@@ -105,7 +105,8 @@ $users = $userService->findAll([
     'status' => 'active',
     'sort_by' => 'name',
     'sort_direction' => 'asc',
-    'limit' => 10
+    'per_page' => 10,
+    'page' => 1
 ]);
 
 // Find user by ID and load department relation
