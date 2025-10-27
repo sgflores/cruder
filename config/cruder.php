@@ -37,8 +37,8 @@ return [
         'log_slow_queries_only' => env('CRUDER_LOG_SLOW_QUERIES_ONLY', false),
         
         'channels' => [
-            'default' => env('CRUDER_QUERY_LOG_CHANNEL', 'single'),
-            'slow_queries' => env('CRUDER_SLOW_QUERY_LOG_CHANNEL', 'single'),
+            'default' => env('CRUDER_QUERY_LOG_CHANNEL', 'daily'),
+            'slow_queries' => env('CRUDER_SLOW_QUERY_LOG_CHANNEL', 'daily'),
         ],
     ],
 
