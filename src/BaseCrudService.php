@@ -211,8 +211,13 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
 
                 // 5. The model is created in the database.
                 $createdModel = $this->model->create($processedData);
+
+                // 6. After creation, an event is fired for hooks or listeners.
+                if ($this->eventService) {
+                    $this->eventService->fire(EventService::AFTER_CREATE, $createdModel);
+                }
             
-                // 6. If relations are requested, the model is reloaded with those relations eager loaded.
+                // 7. If relations are requested, the model is reloaded with those relations eager loaded.
                 $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
                 if (!empty($relationsToLoad)) {
                     $primaryKey = $this->model->getKeyName();
@@ -222,14 +227,9 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                         ->first();
                 }
             
-                // 7. The result is transformed (e.g., for API output or further processing).
+                // 8. The result is transformed (e.g., for API output or further processing).
                 $result = $this->transformResponse($createdModel);
             
-                // 8. After creation, an event is fired for hooks or listeners.
-                if ($this->eventService) {
-                    $this->eventService->fire(EventService::AFTER_CREATE, $result);
-                }
-                
                 // 9. The final created (and possibly transformed) model is returned.
                 return $result;
             }, [
@@ -279,6 +279,11 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                 $processedData = $this->prepareUpdateData($validatedData);
                 $existingModel->update($processedData);
                 
+                // Fire after_update event
+                if ($this->eventService) {
+                    $this->eventService->fire(EventService::AFTER_UPDATE, $existingModel);
+                }
+
                 // Re-load with relations using dynamic PK
                 $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
                 $updatedModel = $this->model->newQuery()
@@ -287,11 +292,6 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
                     ->first();
             
                 $result = $this->transformResponse($updatedModel);
-                
-                // Fire after_update event
-                if ($this->eventService) {
-                    $this->eventService->fire(EventService::AFTER_UPDATE, $result);
-                }
                 
                 return $result;
             }, [
