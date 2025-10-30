@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use SgFlores\Cruder\Services\ExportService;
 use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Services\SearchService;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Base CRUD Service - Complete CRUD Operations Foundation
@@ -184,10 +185,10 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
      * @param array $data The data to create the record with
      * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
      * @param array|ValidationStrategyInterface|null $validationRules Validation rules or strategy
-     * @return Model The created model with relations loaded
+     * @return Model|JsonResource The created model or resource with relations loaded
      * @throws \Exception If creation fails
      */
-    public function create(array $data, $withRelations = null, $validationRules = null): Model
+    public function create(array $data, $withRelations = null, $validationRules = null): Model|JsonResource
     {
         // Fire before_create event
         if ($this->eventService) {
@@ -255,10 +256,10 @@ abstract class BaseCrudService extends BaseReaderService implements CrudConfigur
      * @param array $data The data to update the record with
      * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
      * @param array|ValidationStrategyInterface|null $validationRules Validation rules or strategy
-     * @return Model|null The updated model with relations loaded, or null if not found
+     * @return Model|JsonResource|null The updated model/resource with relations loaded, or null if not found
      * @throws \Exception If update fails
      */
-    public function update(int|string $id, array $data, $withRelations = null, $validationRules = null): ?Model
+    public function update(int|string $id, array $data, $withRelations = null, $validationRules = null): Model|JsonResource|null
     {
         $primaryKey = $this->model->getKeyName();
         // Find without relations to speed up the transaction

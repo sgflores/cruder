@@ -18,6 +18,7 @@ use SgFlores\Cruder\Contracts\ReaderConfigurable;
 use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Base Reader Service - Foundation for Read Operations
@@ -328,19 +329,26 @@ abstract class BaseReaderService implements ReaderConfigurable
      * 
      * @param int|string $id The primary key value to search for
      * @param mixed $withRelations Relations to eager load (boolean, array, string, or null)
-     * @return Model|null The found model with relations loaded, or null if not found
+     * @return Model|JsonResource|null The found model or resource with relations loaded, or null if not found
      */
-    public function findById(int|string $id, $withRelations = null): ?Model
+    public function findById(int|string $id, $withRelations = null): Model|JsonResource|null
+    {
+        $result = $this->findByIdRaw($id, $withRelations);
+        return $result ? $this->transformResponse($result) : null;
+    }
+    
+    /**
+     * Raw single-record fetcher (no transformation) for internal/low-level use.
+     */
+    public function findByIdRaw(int|string $id, $withRelations = null): ?Model
     {
         $primaryKey = $this->model->getKeyName();
         $relationsToLoad = $this->resolveRelationsToLoad($withRelations, $this->getSingleRecordRelations());
         
-        $result = $this->model->newQuery()
+        return $this->model->newQuery()
                            ->with($relationsToLoad)
                            ->where($primaryKey, $id)
                            ->first();
-        
-        return $result ? $this->transformResponse($result) : null;
     }
     
     /**

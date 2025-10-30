@@ -82,7 +82,7 @@ public function getCollectionRelations(): array   // Default: []
 // Returns relations to eager load for collection queries (findAll, search)
 
 public function getSingleRecordRelations(): array // Default: []
-// Returns relations to eager load for single record queries (findById, create, update)
+// Returns relations to eager load for single record queries (findById, findByIdRaw, create, update)
 ```
 
 ### Column Configuration
