@@ -91,6 +91,9 @@ The CRUDer package is a comprehensive Laravel package that provides a robust, ex
 - Relationship loading
 - Query optimization
 - Export functionality
+ - Single-record retrieval helpers:
+   - `findByIdRaw(id, withRelations = null): ?Model` (no transformation)
+   - `findById(id, withRelations = null): Model|JsonResource|null` (applies resource if enabled)
 
 **Column Security**:
 ```php
@@ -176,6 +179,22 @@ findAll() Request
 
 ### 2.1. Create Operations Lifecycle
 ```
+
+findByIdRaw() Request
+```
+findByIdRaw(id, withRelations)
+├── 1. Relation resolution (getSingleRecordRelations)
+├── 2. Query execution (no transformation)
+└── 3. Return Model|null
+```
+
+findById() Request (resource-aware)
+```
+findById(id, withRelations)
+├── 1. Delegates to findByIdRaw
+├── 2. Response Transformation (if shouldEnableApiResources && getApiResourceClass)
+└── 3. Return Model|JsonResource|null
+```
 create() Request
 ├── 1. Input Validation
 ├── 2. Fire EventService::BEFORE_CREATE Event
@@ -185,7 +204,7 @@ create() Request
 ├── 6. Fire EventService::AFTER_CREATE Event
 ├── 7. Cache Invalidation
 ├── 8. Transaction Commit
-└── 9. Return Created Model
+└── 9. Return Created Model or JsonResource
 ```
 
 ### 4. Update Operations Lifecycle
@@ -200,7 +219,7 @@ update() Request
 ├── 7. Fire EventService::AFTER_UPDATE Event
 ├── 8. Cache Invalidation
 ├── 9. Transaction Commit
-└── 10. Return Updated Model
+└── 10. Return Updated Model or JsonResource
 ```
 
 ### 5. Delete Operations Lifecycle

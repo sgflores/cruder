@@ -109,16 +109,19 @@ $users = $userService->findAll([
     'page' => 1
 ]);
 
-// Find user by ID and load department relation
-$user = $userService->findById(1, ['department']);
+// Find user by ID and load department relation (resource-aware)
+$user = $userService->findById(1, ['department']); // returns Model|JsonResource|null
 
-// Create user
+// Find raw model (no resource transformation) for policy checks
+$rawUser = $userService->findByIdRaw(1, ['department']); // returns ?Model
+
+// Create user (returns Model|JsonResource)
 $user = $userService->create([
     'name' => 'John Doe',
     'email' => 'john@example.com'
 ]);
 
-// Update user
+// Update user (returns Model|JsonResource|null)
 $user = $userService->update(1, [
     'name' => 'John Smith'
 ]);
