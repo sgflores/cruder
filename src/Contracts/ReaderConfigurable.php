@@ -233,4 +233,24 @@ interface ReaderConfigurable
      * @return string|null
      */
     public function getDatabaseConnection(): ?string;
+    
+    // ========================================================================
+    // --- Filter Column Mapping ---
+    // ========================================================================
+    
+    /**
+     * Mapping of request parameter keys to internal filterable column names.
+     * 
+     * This allows API consumers to use friendly parameter names (e.g., 'role_names')
+     * while internally mapping them to related column filters (e.g., 'assignedRoles.name').
+     * 
+     * @example
+     * return [
+     *     'role_names' => 'assignedRoles.name',
+     *     'branch_ids' => 'branches.id',
+     * ];
+     * 
+     * @return array Map of request parameter key => internal column name
+     */
+    public function getFilterColumnMapping(): array;
 }

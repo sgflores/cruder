@@ -335,4 +335,30 @@ trait ReaderConfigurationTrait
     {
         return 'strategies';
     }
+    
+    // ========================================================================
+    // --- Filter Column Mapping Methods ---
+    // ========================================================================
+    
+    /**
+     * Mapping of request parameter keys to internal filterable column names.
+     * 
+     * This allows API consumers to use friendly parameter names (e.g., 'role_names')
+     * while internally mapping them to related column filters (e.g., 'assignedRoles.name').
+     * 
+     * Override this method in child classes to define custom mappings.
+     * 
+     * @example
+     * return [
+     *     'role_names' => 'assignedRoles.name',
+     *     'branch_ids' => 'branches.id',
+     *     'department_name' => 'department.name',
+     * ];
+     * 
+     * @return array Map of request parameter key => internal column name
+     */
+    public function getFilterColumnMapping(): array
+    {
+        return [];
+    }
 }

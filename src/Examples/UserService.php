@@ -107,6 +107,23 @@ class UserService extends BaseCrudService
     }
 
     /**
+     * Map friendly request parameter keys to internal filterable column names.
+     * 
+     * This allows API consumers to use user-friendly parameter names (e.g., 'role_names')
+     * while internally using proper column names (e.g., 'assignedRoles.name').
+     * 
+     * @return array Map of request parameter key => internal column name
+     */
+    public function getFilterColumnMapping(): array
+    {
+        return [
+            'role_names' => 'assignedRoles.name',
+            'branch_ids' => 'branches.id',
+            // Add more mappings as needed
+        ];
+    }
+
+    /**
      * Define related searchable columns.
      * 
      * @return array

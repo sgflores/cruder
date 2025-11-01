@@ -674,6 +674,9 @@ abstract class BaseReaderService implements ReaderConfigurable
      */
     protected function applyQueryFilters(Builder $query, array $filters): Builder
     {
+        // 0. Transform filter keys using column mapping (if any)
+        $filters = $this->transformFilterKeys($filters);
+
         // 1. Apply soft delete constraints (withTrashed, onlyTrashed)
         $this->applySoftDeleteConstraints($query, $filters);
 
@@ -760,11 +763,16 @@ abstract class BaseReaderService implements ReaderConfigurable
             if ($this->isRelatedColumn($columnName)) {
                 // Related model column: relation.column or relation_column
                 $relationParts = $this->parseRelationColumn($columnName);
-                $queryBuilder->whereHas($relationParts['relation'], function (Builder $relationQuery) use ($relationParts, $filterValue) {
+                $queryBuilder->whereHas($relationParts['relation'], function (Builder $relationQuery) use ($relationParts, $filterValue, $columnName) {
+                    // Get the related model to access its table name
+                    $relatedModel = $this->model->{$relationParts['relation']}()->getRelated();
+                    $relatedTable = $relatedModel->getTable();
+                    $qualifiedColumn = "{$relatedTable}.{$relationParts['column']}";
+                    
                     if (is_array($filterValue)) {
-                        $relationQuery->whereIn($relationParts['column'], $filterValue);
+                        $relationQuery->whereIn($qualifiedColumn, $filterValue);
                     } else {
-                        $relationQuery->where($relationParts['column'], $filterValue);
+                        $relationQuery->where($qualifiedColumn, $filterValue);
                     }
                 });
             } else {
@@ -992,8 +1000,80 @@ abstract class BaseReaderService implements ReaderConfigurable
             $value = $filterValue['value'] ?? null;
             
             if (isset($advancedFilters[$operator])) {
-                $this->applyFilterOperator($queryBuilder, $columnName, $operator, $value);
+                // Handle related columns with whereHas
+                if ($this->isRelatedColumn($columnName)) {
+                    $relationParts = $this->parseRelationColumn($columnName);
+                    $relatedModel = $this->model->{$relationParts['relation']}()->getRelated();
+                    $relatedTable = $relatedModel->getTable();
+                    $qualifiedColumn = "{$relatedTable}.{$relationParts['column']}";
+                    
+                    $queryBuilder->whereHas($relationParts['relation'], function (Builder $relationQuery) use ($qualifiedColumn, $operator, $value) {
+                        $this->applyFilterOperatorToRelation($relationQuery, $qualifiedColumn, $operator, $value);
+                    });
+                } else {
+                    // Direct column - apply directly
+                    $this->applyFilterOperator($queryBuilder, $columnName, $operator, $value);
+                }
             }
+        }
+    }
+
+    /**
+     * Applies a specific filter operator to a relation query.
+     * 
+     * @param Builder $relationQuery The relation query builder instance
+     * @param string $qualifiedColumn The qualified column name (table.column)
+     * @param string $operator The operator to apply
+     * @param mixed $value The value to filter by
+     * @return void
+     */
+    protected function applyFilterOperatorToRelation(Builder $relationQuery, string $qualifiedColumn, string $operator, $value): void
+    {
+        switch ($operator) {
+            case 'gte':
+                $relationQuery->where($qualifiedColumn, '>=', $value);
+                break;
+            case 'gt':
+                $relationQuery->where($qualifiedColumn, '>', $value);
+                break;
+            case 'lte':
+                $relationQuery->where($qualifiedColumn, '<=', $value);
+                break;
+            case 'lt':
+                $relationQuery->where($qualifiedColumn, '<', $value);
+                break;
+            case 'like':
+                $relationQuery->where($qualifiedColumn, 'LIKE', $value);
+                break;
+            case 'not_like':
+                $relationQuery->where($qualifiedColumn, 'NOT LIKE', $value);
+                break;
+            case 'in':
+                if (is_array($value)) {
+                    $relationQuery->whereIn($qualifiedColumn, $value);
+                }
+                break;
+            case 'not_in':
+                if (is_array($value)) {
+                    $relationQuery->whereNotIn($qualifiedColumn, $value);
+                }
+                break;
+            case 'between':
+                if (is_array($value) && count($value) === 2) {
+                    $relationQuery->whereBetween($qualifiedColumn, $value);
+                }
+                break;
+            case 'not_between':
+                if (is_array($value) && count($value) === 2) {
+                    $relationQuery->whereNotBetween($qualifiedColumn, $value);
+                }
+                break;
+            case 'is_null':
+                $relationQuery->whereNull($qualifiedColumn);
+                break;
+            case 'is_not_null':
+                $relationQuery->whereNotNull($qualifiedColumn);
+                break;
         }
     }
 
@@ -1054,6 +1134,42 @@ abstract class BaseReaderService implements ReaderConfigurable
                 $queryBuilder->whereNotNull($columnName);
                 break;
         }
+    }
+
+    /**
+     * Transforms filter keys using the filter column mapping.
+     * 
+     * Maps request parameter keys (e.g., 'role_names') to internal filterable
+     * column names (e.g., 'assignedRoles.name') based on getFilterColumnMapping().
+     * 
+     * This allows API consumers to use friendly parameter names while internally
+     * using the proper column names for filtering.
+     * 
+     * @param array $filters Array of query options with potentially mapped keys
+     * @return array Transformed filters array with mapped keys
+     */
+    protected function transformFilterKeys(array $filters): array
+    {
+        $mapping = $this->getFilterColumnMapping();
+        
+        // If no mapping defined, return filters as-is
+        if (empty($mapping)) {
+            return $filters;
+        }
+        
+        $transformed = [];
+        
+        foreach ($filters as $key => $value) {
+            // If key exists in mapping, use mapped column name
+            if (isset($mapping[$key])) {
+                $transformed[$mapping[$key]] = $value;
+            } else {
+                // Keep original key-value pair
+                $transformed[$key] = $value;
+            }
+        }
+        
+        return $transformed;
     }
 
     /**
