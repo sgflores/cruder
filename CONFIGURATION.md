@@ -109,6 +109,49 @@ public function getRelatedSortableColumns(): array      // Default: []
 // Returns related model columns that can be used for sorting
 ```
 
+### Filter Column Mapping
+
+```php
+public function getFilterColumnMapping(): array       // Default: []
+// Maps friendly request parameter keys to internal filterable column names
+// Allows API consumers to use user-friendly names while internally using proper column names
+```
+
+**Example Usage:**
+
+This feature allows you to map user-friendly request parameters (e.g., `role_names[]`, `branch_ids[]`) to internal related column filters (e.g., `assignedRoles.name`, `branches.id`). This provides a clean API while leveraging the full power of related column filtering.
+
+See [src/Examples/UserService.php](../src/Examples/UserService.php) for a complete implementation example.
+
+```php
+// In your service:
+public function getRelatedFilterableColumns(): array
+{
+    return [
+        'assignedRoles.name',  // Internal column name for role filtering
+        'branches.id',         // Internal column name for branch filtering
+    ];
+}
+
+public function getFilterColumnMapping(): array
+{
+    return [
+        'role_names' => 'assignedRoles.name',  // Map 'role_names' param to 'assignedRoles.name'
+        'branch_ids' => 'branches.id',         // Map 'branch_ids' param to 'branches.id'
+    ];
+}
+
+// API Usage:
+// GET /api/users?role_names[]=Cashier&branch_ids[]=1&branch_ids[]=2
+// Internally processes as: assignedRoles.name=Cashier & branches.id=[1,2]
+```
+
+**Benefits:**
+- **Clean API**: Use friendly parameter names (`role_names`) instead of technical names (`assignedRoles.name`)
+- **Type-Safe**: Still uses existing column validation from `getRelatedFilterableColumns()`
+- **Flexible**: Supports both single values and arrays automatically
+- **Reusable**: Any service can use this feature by overriding `getFilterColumnMapping()`
+
 ### Default Behavior
 
 ```php
@@ -492,6 +535,7 @@ $cacheLifetime = $service->getCacheLifetimeSeconds();
 - `getRelatedFilterableColumns()` - Related table columns for filtering
 - `getRelatedTextSearchColumns()` - Related table columns for text search
 - `getRelatedSortableColumns()` - Related table columns for sorting
+- `getFilterColumnMapping()` - Map friendly parameter names to internal column names
 
 ### Relations
 - `getCollectionRelations()` - Relations for collection queries

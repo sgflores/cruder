@@ -54,6 +54,7 @@ class ConfigurationTraitTest extends TestCase
         $this->assertFalse($this->userService->shouldEnableChunkedProcessing());
         $this->assertEquals(1000, $this->userService->getChunkSize());
         $this->assertNull($this->userService->getDatabaseConnection());
+        $this->assertEquals([], $this->userService->getFilterColumnMapping());
     }
 
     #[Test]

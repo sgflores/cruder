@@ -65,8 +65,15 @@ class LikeSearchStrategy implements SearchStrategyInterface
             foreach ($relatedColumns as $column) {
                 $relationParts = $this->parseRelationColumn($column);
                 if (!empty($relationParts['relation'])) {
-                    $subQuery->orWhereHas($relationParts['relation'], function (Builder $relationQuery) use ($relationParts, $term) {
-                        $relationQuery->where($relationParts['column'], 'like', '%' . $term . '%');
+                    // Get the main model and relation to access the related model's table
+                    $mainModel = $subQuery->getModel();
+                    $relation = $mainModel->{$relationParts['relation']}();
+                    $relatedModel = $relation->getRelated();
+                    $relatedTable = $relatedModel->getTable();
+                    $qualifiedColumn = "{$relatedTable}.{$relationParts['column']}";
+                    
+                    $subQuery->orWhereHas($relationParts['relation'], function (Builder $relationQuery) use ($qualifiedColumn, $term) {
+                        $relationQuery->where($qualifiedColumn, 'like', '%' . $term . '%');
                     });
                 }
             }
