@@ -740,7 +740,8 @@ abstract class BaseReaderService implements ReaderConfigurable
             $this->getDirectFilterableColumns(),
             $this->getRelatedFilterableColumns()
         );
-
+        $customColumns = $this->resolveCustomFilterColumns();
+ 
         foreach ($queryOptions as $columnName => $filterValue) {
             // Skip reserved keys and null values
             if ($this->isReservedParameterKey($columnName)) {
@@ -749,6 +750,11 @@ abstract class BaseReaderService implements ReaderConfigurable
 
             // Skip advanced filter arrays (they will be processed by applyAdvancedFilters)
             if (is_array($filterValue) && isset($filterValue['operator'])) {
+                continue;
+            }
+
+            if (in_array($columnName, $customColumns, true)) {
+                $this->applyCustomFilterColumn($queryBuilder, $columnName, $filterValue);
                 continue;
             }
 
@@ -980,6 +986,8 @@ abstract class BaseReaderService implements ReaderConfigurable
             $this->getRelatedFilterableColumns()
         );
         
+        $customColumns = $this->resolveCustomFilterColumns();
+        
         foreach ($queryOptions as $columnName => $filterValue) {
             if ($this->isReservedParameterKey($columnName)) {
                 continue;
@@ -989,6 +997,11 @@ abstract class BaseReaderService implements ReaderConfigurable
                 continue;
             }
             
+            if (in_array($columnName, $customColumns, true)) {
+                $this->applyCustomFilterColumn($queryBuilder, $columnName, $filterValue);
+                continue;
+            }
+
             // Validate column is in allowed filterable columns
             if (!in_array($columnName, $allowedColumns)) {
                 throw new InvalidArgumentException(
@@ -1184,6 +1197,44 @@ abstract class BaseReaderService implements ReaderConfigurable
         // Base implementation does nothing, override in child service.
     }
 
+    /**
+     * Resolves custom filter column keys including mapped equivalents.
+     *
+     * @return array
+     */
+    protected function resolveCustomFilterColumns(): array
+    {
+        $customColumns = $this->getCustomFilterColumns();
+ 
+        if (empty($customColumns)) {
+            return [];
+        }
+ 
+        $mapping = $this->getFilterColumnMapping();
+        $resolved = $customColumns;
+
+        foreach ($customColumns as $column) {
+            if (isset($mapping[$column])) {
+                $resolved[] = $mapping[$column];
+            }
+        }
+
+        return array_values(array_unique($resolved));
+    }
+
+    /**
+     * Hook for applying custom (virtual/computed) filter columns.
+     *
+     * @param Builder $queryBuilder
+     * @param string $columnName
+     * @param mixed $filterValue
+     * @return void
+     */
+    protected function applyCustomFilterColumn(Builder $queryBuilder, string $columnName, mixed $filterValue): void
+    {
+        // Intentionally left blank. Override in child services to implement
+        // custom filtering behavior for virtual columns.
+    }
 
     // ========================================================================
     // --- Response Transformation ---

@@ -11,6 +11,7 @@ use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
 use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
 use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 use SgFlores\Cruder\Tests\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 
 class TestUserService extends BaseCrudService
 {
@@ -206,5 +207,27 @@ class TestUserService extends BaseCrudService
     public function getStrategiesParam(): string
     {
         return 'strategies';
+    }
+
+    public function getCustomFilterColumns(): array
+    {
+        return ['is_special_user'];
+    }
+
+    protected function applyCustomFilterColumn(Builder $queryBuilder, string $columnName, mixed $filterValue): void
+    {
+        if ($columnName === 'is_special_user') {
+            $shouldBeSpecial = filter_var($filterValue, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+            if ($shouldBeSpecial === null) {
+                return;
+            }
+
+            if ($shouldBeSpecial) {
+                $queryBuilder->where('name', 'LIKE', 'Special%');
+            } else {
+                $queryBuilder->where('name', 'NOT LIKE', 'Special%');
+            }
+        }
     }
 }

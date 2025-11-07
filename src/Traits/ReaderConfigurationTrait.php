@@ -361,4 +361,14 @@ trait ReaderConfigurationTrait
     {
         return [];
     }
+
+    /**
+     * Custom filter column keys that represent computed/virtual filters.
+     *
+     * @return array
+     */
+    public function getCustomFilterColumns(): array
+    {
+        return [];
+    }
 }

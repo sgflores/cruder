@@ -30,6 +30,7 @@ class ConfigurationTraitTest extends TestCase
         $this->assertEquals(['department_name'], $this->userService->getRelatedSortableColumns());
         $this->assertEquals(['department'], $this->userService->getCollectionRelations());
         $this->assertEquals(['department', 'createdBy', 'updatedBy'], $this->userService->getSingleRecordRelations());
+        $this->assertEquals(['is_special_user'], $this->userService->getCustomFilterColumns());
     }
 
     #[Test]

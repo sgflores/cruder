@@ -253,4 +253,15 @@ interface ReaderConfigurable
      * @return array Map of request parameter key => internal column name
      */
     public function getFilterColumnMapping(): array;
+
+    /**
+     * Custom filter columns that do not exist directly in the database schema.
+     *
+     * These keys can be used to implement computed/virtual filters. Columns declared
+     * here bypass the automatic column validation checks and are expected to be handled
+     * manually in the service (e.g. inside applyCustomFilterColumn).
+     *
+     * @return array
+     */
+    public function getCustomFilterColumns(): array;
 }
