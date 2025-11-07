@@ -329,6 +329,35 @@ class ColumnValidationTest extends TestCase
         }
     }
 
+    public function test_custom_filter_columns_are_supported(): void
+    {
+        $special = User::factory()->create([
+            'name' => 'Special Agent',
+            'department_id' => $this->department->id,
+        ]);
+
+        $regular = User::factory()->create([
+            'name' => 'Regular User',
+            'department_id' => $this->department->id,
+        ]);
+
+        $specialResult = $this->userService->findAll([
+            'is_special_user' => true,
+        ]);
+
+        $this->assertInstanceOf(Collection::class, $specialResult);
+        $this->assertTrue($specialResult->contains('id', $special->id));
+        $this->assertFalse($specialResult->contains('id', $regular->id));
+
+        $regularResult = $this->userService->findAll([
+            'is_special_user' => false,
+        ]);
+
+        $this->assertInstanceOf(Collection::class, $regularResult);
+        $this->assertTrue($regularResult->contains('id', $regular->id));
+        $this->assertFalse($regularResult->contains('id', $special->id));
+    }
+
     public function test_sort_error_messages_include_allowed_columns(): void
     {
         try {

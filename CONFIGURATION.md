@@ -152,6 +152,43 @@ public function getFilterColumnMapping(): array
 - **Flexible**: Supports both single values and arrays automatically
 - **Reusable**: Any service can use this feature by overriding `getFilterColumnMapping()`
 
+
+### Custom Filter Columns
+
+```php
+public function getCustomFilterColumns(): array     // Default: []
+// Returns an array of virtual/computed filter keys
+```
+
+Use this method when you want to expose filter parameters that do not map directly to database columns (for example, an `is_store_owner` flag that checks a pivot table or a computed scope). Columns registered here bypass the automatic validation performed on real columns.
+
+Custom filters can be implemented by overriding `applyCustomFilterColumn()` in your service:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+
+public function getCustomFilterColumns(): array
+{
+    return ['is_store_owner'];
+}
+
+protected function applyCustomFilterColumn(Builder $query, string $column, mixed $value): void
+{
+    if ($column === 'is_store_owner') {
+        $shouldBeOwner = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        if ($shouldBeOwner === true) {
+            $query->whereHas('stores', fn (Builder $builder) => $builder->wherePivot('is_owner', true));
+        } elseif ($shouldBeOwner === false) {
+            $query->whereDoesntHave('stores', fn (Builder $builder) => $builder->wherePivot('is_owner', true));
+        }
+    }
+}
+```
+
+> 💡 **Tip:** If you also define a mapping in `getFilterColumnMapping()`, be sure to include both the public key and its mapped value (if different) in `getCustomFilterColumns()`.
+
+
 ### Default Behavior
 
 ```php

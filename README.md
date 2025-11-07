@@ -16,6 +16,7 @@ A powerful, feature-rich CRUD service package for Laravel applications built on 
 - **Query Caching** - Built-in query caching with configurable lifetime
 - **Performance Monitoring** - Query logging and slow query detection
 - **Column Validation** - Secure column validation for all operations
+- **Virtual Filters** - Safely expose computed filter columns via `getCustomFilterColumns()`
 - **Event System** - Extensible event system for custom business logic
 - **Trait-Based Configuration** - Type-safe, IDE-friendly configuration system
 - **Audit Trail** - Automatic tracking of record changes (created_by, updated_by, deleted_by)
