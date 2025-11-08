@@ -3,8 +3,8 @@
 namespace SgFlores\Cruder\Tests\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Models\Department;
+use SgFlores\Cruder\Tests\Models\User;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\SgFlores\Cruder\Tests\Models\User>

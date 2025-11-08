@@ -2,8 +2,8 @@
 
 namespace SgFlores\Cruder;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\ServiceProvider;
 
 class CruderServiceProvider extends ServiceProvider
 {

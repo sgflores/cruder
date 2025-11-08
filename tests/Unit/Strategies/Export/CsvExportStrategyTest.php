@@ -2,7 +2,6 @@
 
 namespace SgFlores\Cruder\Tests\Unit\Strategies\Export;
 
-use Illuminate\Support\Collection;
 use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
 use SgFlores\Cruder\Tests\UnitTestCase;
 
@@ -13,7 +12,7 @@ class CsvExportStrategyTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new CsvExportStrategy();
+        $this->strategy = new CsvExportStrategy;
     }
 
     public function test_key_returns_csv(): void
@@ -25,7 +24,7 @@ class CsvExportStrategyTest extends UnitTestCase
     {
         $data = collect([]);
         $result = $this->strategy->export($data);
-        
+
         $this->assertEquals('', $result);
     }
 
@@ -33,7 +32,7 @@ class CsvExportStrategyTest extends UnitTestCase
     {
         $data = collect([
             (object) ['name' => 'John Doe', 'email' => 'john@example.com'],
-            (object) ['name' => 'Jane Smith', 'email' => 'jane@example.com']
+            (object) ['name' => 'Jane Smith', 'email' => 'jane@example.com'],
         ]);
 
         $result = $this->strategy->export($data);
@@ -46,7 +45,7 @@ class CsvExportStrategyTest extends UnitTestCase
     public function test_export_without_headers(): void
     {
         $data = collect([
-            (object) ['name' => 'John Doe', 'email' => 'john@example.com']
+            (object) ['name' => 'John Doe', 'email' => 'john@example.com'],
         ]);
 
         $options = ['include_headers' => false];
@@ -59,7 +58,7 @@ class CsvExportStrategyTest extends UnitTestCase
     public function test_export_with_specific_columns(): void
     {
         $data = collect([
-            (object) ['name' => 'John Doe', 'email' => 'john@example.com', 'age' => 30]
+            (object) ['name' => 'John Doe', 'email' => 'john@example.com', 'age' => 30],
         ]);
 
         $options = ['columns' => ['name', 'email']];
@@ -72,7 +71,7 @@ class CsvExportStrategyTest extends UnitTestCase
     public function test_export_escapes_special_characters(): void
     {
         $data = collect([
-            (object) ['name' => 'John "Doe"', 'email' => 'john@example.com,test']
+            (object) ['name' => 'John "Doe"', 'email' => 'john@example.com,test'],
         ]);
 
         $result = $this->strategy->export($data);
@@ -84,7 +83,7 @@ class CsvExportStrategyTest extends UnitTestCase
     public function test_export_handles_newlines(): void
     {
         $data = collect([
-            (object) ['name' => "John\nDoe", 'email' => 'john@example.com']
+            (object) ['name' => "John\nDoe", 'email' => 'john@example.com'],
         ]);
 
         $result = $this->strategy->export($data);
@@ -96,7 +95,7 @@ class CsvExportStrategyTest extends UnitTestCase
     public function test_export_handles_empty_values(): void
     {
         $data = collect([
-            (object) ['name' => 'John Doe', 'email' => '', 'age' => null]
+            (object) ['name' => 'John Doe', 'email' => '', 'age' => null],
         ]);
 
         $result = $this->strategy->export($data);
@@ -108,7 +107,7 @@ class CsvExportStrategyTest extends UnitTestCase
     public function test_export_handles_missing_columns(): void
     {
         $data = collect([
-            (object) ['name' => 'John Doe', 'email' => 'john@example.com']
+            (object) ['name' => 'John Doe', 'email' => 'john@example.com'],
         ]);
 
         $options = ['columns' => ['name', 'email', 'phone']];
@@ -125,15 +124,15 @@ class CsvExportStrategyTest extends UnitTestCase
                 'name' => 'John "Doe"',
                 'email' => 'john@example.com',
                 'description' => 'Line 1, Line 2',
-                'price' => 19.99
-            ]
+                'price' => 19.99,
+            ],
         ]);
 
         $result = $this->strategy->export($data);
 
         $lines = explode("\n", $result);
         $this->assertCount(2, $lines); // Header + data
-        
+
         $this->assertStringContainsString('"John ""Doe"""', $result);
         $this->assertStringContainsString('"Line 1, Line 2"', $result);
     }

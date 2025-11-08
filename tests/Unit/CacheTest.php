@@ -2,11 +2,11 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
-use PHPUnit\Framework\Attributes\Test;
 use Illuminate\Support\Facades\Cache;
-use SgFlores\Cruder\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
+use SgFlores\Cruder\Tests\TestCase;
 
 class CacheTest extends TestCase
 {
@@ -15,7 +15,7 @@ class CacheTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->userService = new TestUserService(new User());
+        $this->userService = new TestUserService(new User);
         Cache::flush(); // Ensure clean cache for each test
     }
 
@@ -39,7 +39,8 @@ class CacheTest extends TestCase
     public function it_does_not_use_cache_when_disabled(): void
     {
         // Create a service with cache disabled
-        $noCacheService = new class(new User()) extends TestUserService {
+        $noCacheService = new class(new User) extends TestUserService
+        {
             public function isQueryCacheEnabled(): bool
             {
                 return false;
@@ -62,10 +63,11 @@ class CacheTest extends TestCase
             ->withArgs(function ($key, $ttl, $callback) {
                 // Check that the key follows the expected format: table:operation:hash:user_id
                 $keyParts = explode(':', $key);
-                return count($keyParts) === 4 
+
+                return count($keyParts) === 4
                     && $keyParts[0] === 'test_users' // Use actual table name from test
                     && $keyParts[1] === 'all'
-                    && is_string($keyParts[2]) 
+                    && is_string($keyParts[2])
                     && is_string($keyParts[3]);
             })
             ->andReturn(collect([]));
@@ -91,7 +93,8 @@ class CacheTest extends TestCase
     public function it_uses_custom_cache_ttl(): void
     {
         // Create a service with custom cache TTL
-        $customTtlService = new class(new User()) extends TestUserService {
+        $customTtlService = new class(new User) extends TestUserService
+        {
             public function getCacheLifetimeSeconds(): int
             {
                 return 1800; // 30 minutes
@@ -117,6 +120,7 @@ class CacheTest extends TestCase
             ->once()
             ->withArgs(function ($key, $ttl, $callback) {
                 $keyParts = explode(':', $key);
+
                 return $keyParts[1] === 'count'; // Check it's a count operation
             })
             ->andReturn(2);
@@ -165,7 +169,8 @@ class CacheTest extends TestCase
     public function it_does_not_clear_cache_when_disabled(): void
     {
         // Create a service with cache disabled
-        $noCacheService = new class(new User()) extends TestUserService {
+        $noCacheService = new class(new User) extends TestUserService
+        {
             public function isQueryCacheEnabled(): bool
             {
                 return false;
@@ -177,10 +182,10 @@ class CacheTest extends TestCase
         $reflection = new \ReflectionClass($noCacheService);
         $method = $reflection->getMethod('clearCache');
         $method->setAccessible(true);
-        
+
         // This should not throw an error even though cache is disabled
         $method->invoke($noCacheService);
-        
+
         $this->assertTrue(true); // If we get here, the method executed without error
     }
 
@@ -192,6 +197,7 @@ class CacheTest extends TestCase
             ->once()
             ->withArgs(function ($key, $ttl, $callback) {
                 $keyParts = explode(':', $key);
+
                 return count($keyParts) === 4 && $keyParts[3] === 'guest'; // No authenticated user
             })
             ->andReturn(collect([]));
@@ -218,7 +224,8 @@ class CacheTest extends TestCase
     public function it_uses_performance_monitoring_cache_clearing(): void
     {
         // Create a service that uses PerformanceMonitoringTrait
-        $monitoringService = new class(new User()) extends TestUserService {
+        $monitoringService = new class(new User) extends TestUserService
+        {
             use \SgFlores\Cruder\Traits\PerformanceMonitoringTrait;
         };
 

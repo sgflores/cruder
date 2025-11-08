@@ -2,19 +2,19 @@
 
 namespace SgFlores\Cruder\Examples;
 
+use App\Models\Customer;
+use App\Models\Order;
+use App\Models\Product;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use SgFlores\Cruder\BaseCrudService;
 use SgFlores\Cruder\BaseReaderService;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\ValidationService;
-use App\Models\Product;
-use App\Models\Order;
-use App\Models\Customer;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Simple Sales Example demonstrating BaseCrudService and BaseReaderService
- * 
+ *
  * This example shows practical usage patterns for:
  * - Product management
  * - Order processing
@@ -25,7 +25,9 @@ use Illuminate\Support\Facades\Log;
 class SimpleSalesExample
 {
     protected ProductService $productService;
+
     protected OrderService $orderService;
+
     protected CustomerService $customerService;
 
     public function __construct(
@@ -51,7 +53,7 @@ class SimpleSalesExample
             'sku' => 'LAP-001',
             'price' => 999.99,
             'description' => 'High-performance laptop for business use',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         echo "Created product: {$product->name} (SKU: {$product->sku})\n";
@@ -60,14 +62,14 @@ class SimpleSalesExample
         $products = $this->productService->findAll([
             'status' => 'active',
             'sort_by' => 'name',
-            'sort_direction' => 'asc'
+            'sort_direction' => 'asc',
         ]);
 
         echo "Found {$products->count()} active products\n";
 
         // 3. Update a product
         $updatedProduct = $this->productService->update($product->id, [
-            'price' => 899.99
+            'price' => 899.99,
         ]);
 
         echo "Updated product price to: \${$updatedProduct->price}\n";
@@ -87,7 +89,7 @@ class SimpleSalesExample
         // 1. Text search
         $searchResults = $this->productService->findAll([
             'search' => 'laptop',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         echo "Search results for 'laptop': {$searchResults->count()} products\n";
@@ -96,9 +98,9 @@ class SimpleSalesExample
         $priceFiltered = $this->productService->findAll([
             'price' => [
                 'operator' => 'between',
-                'value' => [500, 1000]
+                'value' => [500, 1000],
             ],
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         echo "Products between \$500-\$1000: {$priceFiltered->count()}\n";
@@ -106,7 +108,7 @@ class SimpleSalesExample
         // 3. Pagination
         $paginatedResults = $this->productService->findAll([
             'paginate' => 5, // 5 items per page
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         echo "Paginated results: Page {$paginatedResults->currentPage()} of {$paginatedResults->lastPage()}\n";
@@ -124,7 +126,7 @@ class SimpleSalesExample
         $customer = $this->customerService->create([
             'name' => 'John Doe',
             'email' => 'john@example.com',
-            'phone' => '+1-555-0123'
+            'phone' => '+1-555-0123',
         ]);
 
         echo "Created customer: {$customer->name}\n";
@@ -136,7 +138,7 @@ class SimpleSalesExample
                 'product_id' => 1,
                 'quantity' => 2,
                 'unit_price' => 899.99,
-                'total_price' => 1799.98
+                'total_price' => 1799.98,
             ]);
 
             // Update inventory
@@ -145,22 +147,22 @@ class SimpleSalesExample
             // Send confirmation email
             Log::info('Order confirmation sent', [
                 'order_id' => $order->id,
-                'customer_email' => $order->customer->email
+                'customer_email' => $order->customer->email,
             ]);
         });
 
         $order = $this->orderService->create([
             'customer_id' => $customer->id,
-            'order_number' => 'ORD-' . time(),
+            'order_number' => 'ORD-'.time(),
             'status' => 'pending',
-            'total_amount' => 1799.98
+            'total_amount' => 1799.98,
         ], ['customer', 'items']);
 
         echo "Created order: {$order->order_number} for \${$order->total_amount}\n";
 
         // 3. Update order status
         $this->orderService->update($order->id, [
-            'status' => 'shipped'
+            'status' => 'shipped',
         ]);
 
         echo "Updated order status to: shipped\n\n";
@@ -179,20 +181,20 @@ class SimpleSalesExample
                 'name' => 'Wireless Mouse',
                 'sku' => 'WM-001',
                 'price' => 29.99,
-                'status' => 'active'
+                'status' => 'active',
             ],
             [
                 'name' => 'Keyboard',
                 'sku' => 'KB-001',
                 'price' => 79.99,
-                'status' => 'active'
+                'status' => 'active',
             ],
             [
                 'name' => 'Monitor',
                 'sku' => 'MON-001',
                 'price' => 299.99,
-                'status' => 'active'
-            ]
+                'status' => 'active',
+            ],
         ];
 
         $this->productService->bulkCreate($products);
@@ -218,11 +220,11 @@ class SimpleSalesExample
         $expensiveProducts = $this->productService->findAll([
             'price' => [
                 'operator' => 'gte',
-                'value' => 500
+                'value' => 500,
             ],
             'status' => 'active',
             'sort_by' => 'price',
-            'sort_direction' => 'desc'
+            'sort_direction' => 'desc',
         ]);
 
         echo "Expensive products (\$500+): {$expensiveProducts->count()}\n";
@@ -231,9 +233,9 @@ class SimpleSalesExample
         $recentOrders = $this->orderService->findAll([
             'created_at' => [
                 'operator' => 'gte',
-                'value' => now()->subDays(7)->toDateString()
+                'value' => now()->subDays(7)->toDateString(),
             ],
-            'status' => 'shipped'
+            'status' => 'shipped',
         ], ['customer']);
 
         echo "Recent orders (last 7 days): {$recentOrders->count()}\n";
@@ -255,14 +257,14 @@ class SimpleSalesExample
             Log::info('New product created', [
                 'product_id' => $product->id,
                 'name' => $product->name,
-                'sku' => $product->sku
+                'sku' => $product->sku,
             ]);
         });
 
         $this->orderService->getEventService()->listen('after_update', function ($order) {
             if ($order->status === 'cancelled') {
                 Log::info('Order cancelled, inventory restored', [
-                    'order_id' => $order->id
+                    'order_id' => $order->id,
                 ]);
             }
         });
@@ -272,7 +274,7 @@ class SimpleSalesExample
             'name' => 'Tablet',
             'sku' => 'TAB-001',
             'price' => 399.99,
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         echo "Created product with event logging\n\n";
@@ -284,7 +286,7 @@ class SimpleSalesExample
         // Inventory update logic
         Log::info('Inventory updated', [
             'product_id' => $productId,
-            'quantity_reduced' => $quantity
+            'quantity_reduced' => $quantity,
         ]);
     }
 }
@@ -305,21 +307,21 @@ class ProductService extends BaseCrudService
     public function getDirectFilterableColumns(): array
     {
         return [
-            'name', 'sku', 'price', 'status', 'created_at'
+            'name', 'sku', 'price', 'status', 'created_at',
         ];
     }
 
     public function getDirectSortableColumns(): array
     {
         return [
-            'name', 'sku', 'price', 'created_at', 'updated_at'
+            'name', 'sku', 'price', 'created_at', 'updated_at',
         ];
     }
 
     public function getDirectTextSearchColumns(): array
     {
         return [
-            'name', 'description', 'sku'
+            'name', 'description', 'sku',
         ];
     }
 
@@ -350,21 +352,21 @@ class OrderService extends BaseCrudService
     public function getDirectFilterableColumns(): array
     {
         return [
-            'customer_id', 'order_number', 'status', 'total_amount', 'created_at'
+            'customer_id', 'order_number', 'status', 'total_amount', 'created_at',
         ];
     }
 
     public function getDirectSortableColumns(): array
     {
         return [
-            'order_number', 'status', 'total_amount', 'created_at', 'updated_at'
+            'order_number', 'status', 'total_amount', 'created_at', 'updated_at',
         ];
     }
 
     public function getDirectTextSearchColumns(): array
     {
         return [
-            'order_number'
+            'order_number',
         ];
     }
 
@@ -395,21 +397,21 @@ class CustomerService extends BaseCrudService
     public function getDirectFilterableColumns(): array
     {
         return [
-            'name', 'email', 'phone', 'status'
+            'name', 'email', 'phone', 'status',
         ];
     }
 
     public function getDirectSortableColumns(): array
     {
         return [
-            'name', 'email', 'created_at', 'updated_at'
+            'name', 'email', 'created_at', 'updated_at',
         ];
     }
 
     public function getDirectTextSearchColumns(): array
     {
         return [
-            'name', 'email', 'phone'
+            'name', 'email', 'phone',
         ];
     }
 
@@ -423,4 +425,3 @@ class CustomerService extends BaseCrudService
         return ['orders'];
     }
 }
-

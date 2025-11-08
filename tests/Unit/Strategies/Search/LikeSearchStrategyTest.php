@@ -4,19 +4,21 @@ namespace SgFlores\Cruder\Tests\Unit\Strategies\Search;
 
 use Illuminate\Database\Eloquent\Builder;
 use Mockery;
-use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 
 class LikeSearchStrategyTest extends OrchestraTestCase
 {
     protected LikeSearchStrategy $strategy;
+
     protected $mockQuery;
+
     protected $mockSubQuery;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new LikeSearchStrategy();
+        $this->strategy = new LikeSearchStrategy;
         $this->mockQuery = Mockery::mock(Builder::class);
         $this->mockSubQuery = Mockery::mock(Builder::class);
     }
@@ -32,7 +34,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $config = [
             'direct_columns' => ['name', 'email'],
             'related_columns' => [],
-            'term' => 'test search'
+            'term' => 'test search',
         ];
 
         $filters = ['search' => 'test search'];
@@ -42,6 +44,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             ->with(Mockery::type('Closure'))
             ->andReturnUsing(function ($callback) {
                 $callback($this->mockSubQuery);
+
                 return $this->mockQuery;
             });
 
@@ -67,7 +70,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $config = [
             'direct_columns' => [],
             'related_columns' => ['department_name'],
-            'term' => 'test search'
+            'term' => 'test search',
         ];
 
         $filters = ['search' => 'test search'];
@@ -85,23 +88,24 @@ class LikeSearchStrategyTest extends OrchestraTestCase
                 $this->mockSubQuery->shouldReceive('getModel')
                     ->once()
                     ->andReturn($mockModel);
-                
+
                 // Mock model's relation method
                 $mockModel->shouldReceive('department')
                     ->once()
                     ->andReturn($mockRelation);
-                
+
                 // Mock relation's getRelated()
                 $mockRelation->shouldReceive('getRelated')
                     ->once()
                     ->andReturn($mockRelatedModel);
-                
+
                 // Mock related model's getTable()
                 $mockRelatedModel->shouldReceive('getTable')
                     ->once()
                     ->andReturn('departments');
-                
+
                 $callback($this->mockSubQuery);
+
                 return $this->mockQuery;
             });
 
@@ -110,6 +114,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             ->once()
             ->andReturnUsing(function ($relation, $callback) {
                 $callback($this->mockSubQuery);
+
                 return $this->mockSubQuery;
             });
 
@@ -127,7 +132,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $config = [
             'direct_columns' => ['name', 'email'],
             'related_columns' => ['department_name'],
-            'term' => 'test search'
+            'term' => 'test search',
         ];
 
         $filters = ['search' => 'test search'];
@@ -145,23 +150,24 @@ class LikeSearchStrategyTest extends OrchestraTestCase
                 $this->mockSubQuery->shouldReceive('getModel')
                     ->once()
                     ->andReturn($mockModel);
-                
+
                 // Mock model's relation method
                 $mockModel->shouldReceive('department')
                     ->once()
                     ->andReturn($mockRelation);
-                
+
                 // Mock relation's getRelated()
                 $mockRelation->shouldReceive('getRelated')
                     ->once()
                     ->andReturn($mockRelatedModel);
-                
+
                 // Mock related model's getTable()
                 $mockRelatedModel->shouldReceive('getTable')
                     ->once()
                     ->andReturn('departments');
-                
+
                 $callback($this->mockSubQuery);
+
                 return $this->mockQuery;
             });
 
@@ -179,6 +185,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             ->once()
             ->andReturnUsing(function ($relation, $callback) {
                 $callback($this->mockSubQuery);
+
                 return $this->mockSubQuery;
             });
 
@@ -196,7 +203,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $config = [
             'direct_columns' => [],
             'related_columns' => [],
-            'term' => 'test search'
+            'term' => 'test search',
         ];
 
         $filters = ['search' => 'test search'];
@@ -206,6 +213,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             ->with(Mockery::type('Closure'))
             ->andReturnUsing(function ($callback) {
                 $callback($this->mockSubQuery);
+
                 return $this->mockQuery;
             });
 
@@ -221,7 +229,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $config = [
             'direct_columns' => [],
             'related_columns' => ['department_name'],
-            'term' => 'test search'
+            'term' => 'test search',
         ];
 
         $filters = ['search' => 'test search'];
@@ -239,23 +247,24 @@ class LikeSearchStrategyTest extends OrchestraTestCase
                 $this->mockSubQuery->shouldReceive('getModel')
                     ->once()
                     ->andReturn($mockModel);
-                
+
                 // Mock model's relation method
                 $mockModel->shouldReceive('department')
                     ->once()
                     ->andReturn($mockRelation);
-                
+
                 // Mock relation's getRelated()
                 $mockRelation->shouldReceive('getRelated')
                     ->once()
                     ->andReturn($mockRelatedModel);
-                
+
                 // Mock related model's getTable()
                 $mockRelatedModel->shouldReceive('getTable')
                     ->once()
                     ->andReturn('departments');
-                
+
                 $callback($this->mockSubQuery);
+
                 return $this->mockQuery;
             });
 
@@ -264,6 +273,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             ->once()
             ->andReturnUsing(function ($relation, $callback) {
                 $callback($this->mockSubQuery);
+
                 return $this->mockSubQuery;
             });
 
@@ -281,7 +291,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $config = [
             'direct_columns' => [],
             'related_columns' => ['department.name'],
-            'term' => 'test search'
+            'term' => 'test search',
         ];
 
         $filters = ['search' => 'test search'];
@@ -299,23 +309,24 @@ class LikeSearchStrategyTest extends OrchestraTestCase
                 $this->mockSubQuery->shouldReceive('getModel')
                     ->once()
                     ->andReturn($mockModel);
-                
+
                 // Mock model's relation method
                 $mockModel->shouldReceive('department')
                     ->once()
                     ->andReturn($mockRelation);
-                
+
                 // Mock relation's getRelated()
                 $mockRelation->shouldReceive('getRelated')
                     ->once()
                     ->andReturn($mockRelatedModel);
-                
+
                 // Mock related model's getTable()
                 $mockRelatedModel->shouldReceive('getTable')
                     ->once()
                     ->andReturn('departments');
-                
+
                 $callback($this->mockSubQuery);
+
                 return $this->mockQuery;
             });
 
@@ -324,6 +335,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             ->once()
             ->andReturnUsing(function ($relation, $callback) {
                 $callback($this->mockSubQuery);
+
                 return $this->mockSubQuery;
             });
 
@@ -341,7 +353,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $config = [
             'direct_columns' => ['name'],
             'related_columns' => [],
-            'term' => 'test%_search'
+            'term' => 'test%_search',
         ];
 
         $searchTerm = 'test%_search';
@@ -352,11 +364,12 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             ->with(Mockery::type('Closure'))
             ->andReturnUsing(function ($callback) {
                 $callback($this->mockSubQuery);
+
                 return $this->mockQuery;
             });
 
         $this->mockSubQuery->shouldReceive('orWhere')
-            ->with('name', 'like', '%' . $searchTerm . '%')
+            ->with('name', 'like', '%'.$searchTerm.'%')
             ->once();
 
         $result = $this->strategy->search($this->mockQuery, $filters, $config);

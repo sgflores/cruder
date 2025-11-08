@@ -14,15 +14,16 @@ use SgFlores\Cruder\Tests\UnitTestCase;
 class ExportServiceTest extends UnitTestCase
 {
     protected ExportService $service;
+
     protected Collection $testData;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ExportService();
+        $this->service = new ExportService;
         $this->testData = collect([
             (object) ['name' => 'John Doe', 'email' => 'john@example.com'],
-            (object) ['name' => 'Jane Smith', 'email' => 'jane@example.com']
+            (object) ['name' => 'Jane Smith', 'email' => 'jane@example.com'],
         ]);
     }
 
@@ -34,33 +35,33 @@ class ExportServiceTest extends UnitTestCase
 
     public function test_add_strategy(): void
     {
-        $strategy = new CsvExportStrategy();
-        
+        $strategy = new CsvExportStrategy;
+
         $this->service->addStrategy('csv', $strategy);
-        
+
         $this->assertTrue($this->service->hasFormat('csv'));
     }
 
     public function test_add_strategy_by_key(): void
     {
-        $strategy = new CsvExportStrategy();
-        
+        $strategy = new CsvExportStrategy;
+
         $this->service->addStrategyByKey($strategy);
-        
+
         $this->assertTrue($this->service->hasFormat('csv'));
     }
 
     public function test_add_strategy_by_key_uses_strategy_key(): void
     {
-        $csvStrategy = new CsvExportStrategy();
-        $jsonStrategy = new JsonExportStrategy();
-        
+        $csvStrategy = new CsvExportStrategy;
+        $jsonStrategy = new JsonExportStrategy;
+
         $this->service->addStrategyByKey($csvStrategy);
         $this->service->addStrategyByKey($jsonStrategy);
-        
+
         $this->assertTrue($this->service->hasFormat('csv'));
         $this->assertTrue($this->service->hasFormat('json'));
-        
+
         $formats = $this->service->getAvailableFormats();
         $this->assertContains('csv', $formats);
         $this->assertContains('json', $formats);
@@ -73,11 +74,11 @@ class ExportServiceTest extends UnitTestCase
             ->once()
             ->with($this->testData, ['columns' => ['name', 'email']])
             ->andReturn('name,email\nJohn Doe,john@example.com');
-        
+
         $this->service->addStrategy('csv', $strategy);
-        
+
         $result = $this->service->export('csv', $this->testData, ['columns' => ['name', 'email']]);
-        
+
         $this->assertEquals('name,email\nJohn Doe,john@example.com', $result);
     }
 
@@ -85,28 +86,28 @@ class ExportServiceTest extends UnitTestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage("Export format 'nonexistent' not supported");
-        
+
         $this->service->export('nonexistent', $this->testData);
     }
 
     public function test_export_with_nonexistent_strategy_shows_available_formats(): void
     {
-        $this->service->addStrategy('csv', new CsvExportStrategy());
-        $this->service->addStrategy('json', new JsonExportStrategy());
-        
+        $this->service->addStrategy('csv', new CsvExportStrategy);
+        $this->service->addStrategy('json', new JsonExportStrategy);
+
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage("Export format 'nonexistent' not supported. Available formats: csv, json");
-        
+
         $this->service->export('nonexistent', $this->testData);
     }
 
     public function test_get_available_formats(): void
     {
-        $this->service->addStrategy('csv', new CsvExportStrategy());
-        $this->service->addStrategy('json', new JsonExportStrategy());
-        
+        $this->service->addStrategy('csv', new CsvExportStrategy);
+        $this->service->addStrategy('json', new JsonExportStrategy);
+
         $formats = $this->service->getAvailableFormats();
-        
+
         $this->assertCount(2, $formats);
         $this->assertContains('csv', $formats);
         $this->assertContains('json', $formats);
@@ -115,9 +116,9 @@ class ExportServiceTest extends UnitTestCase
     public function test_has_format(): void
     {
         $this->assertFalse($this->service->hasFormat('csv'));
-        
-        $this->service->addStrategy('csv', new CsvExportStrategy());
-        
+
+        $this->service->addStrategy('csv', new CsvExportStrategy);
+
         $this->assertTrue($this->service->hasFormat('csv'));
     }
 
@@ -126,15 +127,15 @@ class ExportServiceTest extends UnitTestCase
         $strategy = Mockery::mock(CsvExportStrategy::class);
         $strategy->shouldReceive('export')
             ->once()
-            ->with(Mockery::on(function($data) {
+            ->with(Mockery::on(function ($data) {
                 return $data instanceof \Illuminate\Support\Collection && $data->isEmpty();
             }), [])
             ->andReturn('');
-        
+
         $this->service->addStrategy('csv', $strategy);
-        
+
         $result = $this->service->export('csv', collect([]), []);
-        
+
         $this->assertEquals('', $result);
     }
 
@@ -144,18 +145,18 @@ class ExportServiceTest extends UnitTestCase
         $options = [
             'columns' => ['name', 'email'],
             'pretty_print' => true,
-            'json_flags' => JSON_UNESCAPED_UNICODE
+            'json_flags' => JSON_UNESCAPED_UNICODE,
         ];
-        
+
         $strategy->shouldReceive('export')
             ->once()
             ->with($this->testData, $options)
             ->andReturn('{"name":"John Doe","email":"john@example.com"}');
-        
+
         $this->service->addStrategy('json', $strategy);
-        
+
         $result = $this->service->export('json', $this->testData, $options);
-        
+
         $this->assertEquals('{"name":"John Doe","email":"john@example.com"}', $result);
     }
 
@@ -163,25 +164,25 @@ class ExportServiceTest extends UnitTestCase
     {
         $csvStrategy = Mockery::mock(CsvExportStrategy::class);
         $jsonStrategy = Mockery::mock(JsonExportStrategy::class);
-        
+
         $this->service->addStrategy('csv', $csvStrategy);
         $this->service->addStrategy('json', $jsonStrategy);
-        
+
         // Test CSV export
         $csvStrategy->shouldReceive('export')
             ->once()
             ->with($this->testData, [])
             ->andReturn('name,email\nJohn Doe,john@example.com');
-        
+
         $result = $this->service->export('csv', $this->testData);
         $this->assertEquals('name,email\nJohn Doe,john@example.com', $result);
-        
+
         // Test JSON export
         $jsonStrategy->shouldReceive('export')
             ->once()
             ->with($this->testData, [])
             ->andReturn('{"name":"John Doe","email":"john@example.com"}');
-        
+
         $result = $this->service->export('json', $this->testData);
         $this->assertEquals('{"name":"John Doe","email":"john@example.com"}', $result);
     }
@@ -190,17 +191,17 @@ class ExportServiceTest extends UnitTestCase
     {
         $firstStrategy = Mockery::mock(CsvExportStrategy::class);
         $secondStrategy = Mockery::mock(CsvExportStrategy::class);
-        
+
         $this->service->addStrategy('csv', $firstStrategy);
         $this->service->addStrategy('csv', $secondStrategy); // Replace
-        
+
         $secondStrategy->shouldReceive('export')
             ->once()
             ->with($this->testData, [])
             ->andReturn('replaced strategy output');
-        
+
         $result = $this->service->export('csv', $this->testData);
-        
+
         $this->assertEquals('replaced strategy output', $result);
     }
 
@@ -210,12 +211,12 @@ class ExportServiceTest extends UnitTestCase
         $strategy->shouldReceive('export')
             ->once()
             ->andThrow(new \Exception('Strategy error'));
-        
+
         $this->service->addStrategy('csv', $strategy);
-        
+
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Strategy error');
-        
+
         $this->service->export('csv', $this->testData);
     }
 
@@ -226,11 +227,11 @@ class ExportServiceTest extends UnitTestCase
             ->once()
             ->with($this->testData, [])
             ->andReturn('exported data');
-        
+
         $this->service->addStrategy('csv', $strategy);
-        
+
         $result = $this->service->export('csv', $this->testData);
-        
+
         $this->assertEquals('exported data', $result);
     }
 
@@ -239,22 +240,23 @@ class ExportServiceTest extends UnitTestCase
         $strategy = Mockery::mock(CsvExportStrategy::class);
         $strategy->shouldReceive('export')
             ->once()
-            ->with(Mockery::on(function($data) {
+            ->with(Mockery::on(function ($data) {
                 return $data instanceof \Illuminate\Support\Collection && $data->isEmpty();
             }), [])
             ->andReturn('empty data exported');
-        
+
         $this->service->addStrategy('csv', $strategy);
-        
+
         $result = $this->service->export('csv', collect([]), []);
-        
+
         $this->assertEquals('empty data exported', $result);
     }
 
     public function test_throws_error_when_calling_export_without_export_service()
     {
         // Create a service without ExportService
-        $serviceWithoutExport = new class(new User()) extends BaseReaderService {
+        $serviceWithoutExport = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No ExportService provided

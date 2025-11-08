@@ -22,19 +22,19 @@ abstract class UnitTestCase extends OrchestraTestCase
             'database' => ':memory:',
             'prefix' => '',
         ]);
-        
+
         // Setup cache
         $app['config']->set('cache.default', 'array');
         $app['config']->set('cache.stores.array', [
             'driver' => 'array',
         ]);
-        
+
         // Setup session
         $app['config']->set('session.driver', 'array');
-        
+
         // Setup queue
         $app['config']->set('queue.default', 'sync');
-        
+
         // Setup app
         $app['config']->set('app.env', 'testing');
         $app['config']->set('app.debug', true);

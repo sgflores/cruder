@@ -2,16 +2,16 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
-use PHPUnit\Framework\Attributes\Test;
-use SgFlores\Cruder\Services\EventService;
-use SgFlores\Cruder\BaseCrudService;
-use SgFlores\Cruder\BaseReaderService;
-use SgFlores\Cruder\Tests\Models\User;
-use SgFlores\Cruder\Tests\Models\Department;
-use SgFlores\Cruder\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\Test;
+use SgFlores\Cruder\BaseCrudService;
+use SgFlores\Cruder\BaseReaderService;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Tests\Models\Department;
+use SgFlores\Cruder\Tests\Models\User;
+use SgFlores\Cruder\Tests\TestCase;
 
 class ServiceInjectionValidationTest extends TestCase
 {
@@ -22,20 +22,21 @@ class ServiceInjectionValidationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create department for user creation
         $this->department = Department::create([
             'name' => 'Test Department',
             'code' => 'TEST',
-            'description' => 'Test Department for testing'
+            'description' => 'Test Department for testing',
         ]);
     }
 
     #[Test]
-    public function it_throws_error_when_calling_addEventListener_without_event_service()
+    public function it_throws_error_when_calling_add_event_listener_without_event_service()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User()) extends BaseCrudService {
+        $serviceWithoutEvents = new class(new User) extends BaseCrudService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No EventService provided
@@ -85,16 +86,17 @@ class ServiceInjectionValidationTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('EventService is required for event functionality');
 
-        $serviceWithoutEvents->addEventListener(EventService::BEFORE_CREATE, function($data) {
+        $serviceWithoutEvents->addEventListener(EventService::BEFORE_CREATE, function ($data) {
             return $data;
         });
     }
 
     #[Test]
-    public function it_throws_error_when_calling_findAll_with_strategies_without_search_service()
+    public function it_throws_error_when_calling_find_all_with_strategies_without_search_service()
     {
         // Create a service without SearchService
-        $serviceWithoutSearch = new class(new User()) extends BaseReaderService {
+        $serviceWithoutSearch = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No SearchService provided
@@ -135,15 +137,16 @@ class ServiceInjectionValidationTest extends TestCase
         $this->expectExceptionMessage('SearchService is required for strategy execution');
 
         $serviceWithoutSearch->findAll([
-            'strategies' => ['like']
+            'strategies' => ['like'],
         ]);
     }
 
     #[Test]
-    public function it_does_not_throw_error_when_calling_findAll_without_strategies_and_without_search_service()
+    public function it_does_not_throw_error_when_calling_find_all_without_strategies_and_without_search_service()
     {
         // Create a service without SearchService
-        $serviceWithoutSearch = new class(new User()) extends BaseReaderService {
+        $serviceWithoutSearch = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No SearchService provided
@@ -197,7 +200,8 @@ class ServiceInjectionValidationTest extends TestCase
     public function it_throws_error_when_calling_export_without_export_service()
     {
         // Create a service without ExportService
-        $serviceWithoutExport = new class(new User()) extends BaseReaderService {
+        $serviceWithoutExport = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No ExportService provided
@@ -244,7 +248,8 @@ class ServiceInjectionValidationTest extends TestCase
     public function it_returns_null_when_getting_event_service_that_was_not_injected()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User()) extends BaseCrudService {
+        $serviceWithoutEvents = new class(new User) extends BaseCrudService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No EventService provided
@@ -298,7 +303,8 @@ class ServiceInjectionValidationTest extends TestCase
     public function it_returns_null_when_getting_search_service_that_was_not_injected()
     {
         // Create a service without SearchService
-        $serviceWithoutSearch = new class(new User()) extends BaseReaderService {
+        $serviceWithoutSearch = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No SearchService provided
@@ -342,7 +348,8 @@ class ServiceInjectionValidationTest extends TestCase
     public function it_returns_null_when_getting_export_service_that_was_not_injected()
     {
         // Create a service without ExportService
-        $serviceWithoutExport = new class(new User()) extends BaseReaderService {
+        $serviceWithoutExport = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No ExportService provided
@@ -386,7 +393,8 @@ class ServiceInjectionValidationTest extends TestCase
     public function it_returns_null_when_getting_query_logger_that_was_not_injected()
     {
         // Create a service without QueryLogger
-        $serviceWithoutQueryLogger = new class(new User()) extends BaseReaderService {
+        $serviceWithoutQueryLogger = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No QueryLogger provided
@@ -427,10 +435,11 @@ class ServiceInjectionValidationTest extends TestCase
     }
 
     #[Test]
-    public function it_works_when_calling_findAll_without_query_logger()
+    public function it_works_when_calling_find_all_without_query_logger()
     {
         // Create a service without QueryLogger
-        $serviceWithoutQueryLogger = new class(new User()) extends BaseReaderService {
+        $serviceWithoutQueryLogger = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No QueryLogger provided
@@ -484,7 +493,8 @@ class ServiceInjectionValidationTest extends TestCase
     public function it_works_when_calling_count_without_query_logger()
     {
         // Create a service without QueryLogger
-        $serviceWithoutQueryLogger = new class(new User()) extends BaseReaderService {
+        $serviceWithoutQueryLogger = new class(new User) extends BaseReaderService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No QueryLogger provided
@@ -537,7 +547,8 @@ class ServiceInjectionValidationTest extends TestCase
     public function it_works_when_calling_crud_operations_without_event_service()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User()) extends BaseCrudService {
+        $serviceWithoutEvents = new class(new User) extends BaseCrudService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No EventService provided

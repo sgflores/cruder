@@ -3,9 +3,9 @@
 namespace SgFlores\Cruder\Tests\Unit;
 
 use PHPUnit\Framework\Attributes\Test;
-use SgFlores\Cruder\Tests\TestCase;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
+use SgFlores\Cruder\Tests\TestCase;
 
 class ConfigurationTraitTest extends TestCase
 {
@@ -14,8 +14,8 @@ class ConfigurationTraitTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->userService = new TestUserService(new User());
+
+        $this->userService = new TestUserService(new User);
     }
 
     #[Test]
@@ -72,18 +72,19 @@ class ConfigurationTraitTest extends TestCase
     public function it_can_override_configuration_methods(): void
     {
         // Create a service that overrides configuration methods
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getDirectTextSearchColumns(): array
             {
                 return ['name', 'email'];
             }
-            
+
             public function isAuditTrailEnabled(): bool
             {
                 return false;
             }
         };
-        
+
         $this->assertEquals(['name', 'email'], $service->getDirectTextSearchColumns());
         $this->assertFalse($service->isAuditTrailEnabled());
     }
