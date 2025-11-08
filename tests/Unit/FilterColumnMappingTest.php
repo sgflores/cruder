@@ -2,24 +2,25 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
-use PHPUnit\Framework\Attributes\Test;
-use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
-use SgFlores\Cruder\Tests\TestCase;
-use SgFlores\Cruder\Tests\Models\User;
+use Illuminate\Support\Collection;
+use PHPUnit\Framework\Attributes\Test;
 use SgFlores\Cruder\Tests\Models\Department;
+use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
+use SgFlores\Cruder\Tests\TestCase;
 
 class FilterColumnMappingTest extends TestCase
 {
     protected TestUserService $userService;
+
     protected Department $department;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->userService = new TestUserService(new User());
+
+        $this->userService = new TestUserService(new User);
         $this->department = Department::factory()->create();
     }
 
@@ -38,7 +39,8 @@ class FilterColumnMappingTest extends TestCase
     public function it_can_be_overridden_in_child_service(): void
     {
         // Create a service that overrides getFilterColumnMapping
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [
@@ -53,7 +55,7 @@ class FilterColumnMappingTest extends TestCase
                 ];
             }
         };
-        
+
         $mapping = $service->getFilterColumnMapping();
         $this->assertIsArray($mapping);
         $this->assertArrayHasKey('dept_name', $mapping);
@@ -68,7 +70,8 @@ class FilterColumnMappingTest extends TestCase
     public function it_transforms_filter_keys_using_mapping(): void
     {
         // Create a service with filter column mapping
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [
@@ -102,7 +105,8 @@ class FilterColumnMappingTest extends TestCase
     public function it_preserves_non_mapped_filter_keys(): void
     {
         // Create a service with filter column mapping
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [
@@ -120,7 +124,7 @@ class FilterColumnMappingTest extends TestCase
 
         // Test that non-mapped keys are preserved
         $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
-        
+
         $result = $service->findAll([
             'dept_name' => $this->department->name, // Should be mapped to department.name
             'id' => $user1->id,                     // Should NOT be mapped (not in mapping)
@@ -135,7 +139,8 @@ class FilterColumnMappingTest extends TestCase
     public function it_handles_empty_mapping_gracefully(): void
     {
         // Service with empty mapping should work normally
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [];
@@ -143,7 +148,7 @@ class FilterColumnMappingTest extends TestCase
         };
 
         $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
-        
+
         $result = $service->findAll([
             'id' => $user1->id,
             'name' => 'User 1',
@@ -157,9 +162,10 @@ class FilterColumnMappingTest extends TestCase
     {
         // Create another department for testing
         $department2 = Department::factory()->create(['name' => 'Engineering']);
-        
+
         // Create a service with filter column mapping
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [
@@ -198,7 +204,8 @@ class FilterColumnMappingTest extends TestCase
     public function it_supports_single_values_in_mapped_filters(): void
     {
         // Create a service with filter column mapping
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [
@@ -230,7 +237,8 @@ class FilterColumnMappingTest extends TestCase
     public function it_respects_reserved_parameters_during_transformation(): void
     {
         // Create a service with filter column mapping
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [
@@ -248,7 +256,7 @@ class FilterColumnMappingTest extends TestCase
 
         // Reserved parameters should not be transformed and should work normally
         $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
-        
+
         // Test without pagination (should return Collection)
         $result1 = $service->findAll([
             'dept_name' => $this->department->name,
@@ -273,7 +281,8 @@ class FilterColumnMappingTest extends TestCase
     public function it_works_with_advanced_filters_after_mapping(): void
     {
         // Create a service with filter column mapping
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [
@@ -293,7 +302,7 @@ class FilterColumnMappingTest extends TestCase
         // Note: Advanced filters use internal column names, so this tests that
         // basic mapped filters don't interfere with advanced filter processing
         $user1 = User::factory()->create(['name' => 'User 1', 'department_id' => $this->department->id]);
-        
+
         $result = $service->findAll([
             'dept_name' => $this->department->name,    // Mapped filter
             'id' => ['operator' => 'gte', 'value' => 1], // Advanced filter (not mapped)
@@ -307,7 +316,8 @@ class FilterColumnMappingTest extends TestCase
     public function it_validates_mapped_columns_against_related_filterable_columns(): void
     {
         // Create a service where mapping points to a column NOT in getRelatedFilterableColumns
-        $service = new class(new User()) extends TestUserService {
+        $service = new class(new User) extends TestUserService
+        {
             public function getFilterColumnMapping(): array
             {
                 return [
@@ -327,10 +337,9 @@ class FilterColumnMappingTest extends TestCase
         // This should throw an exception because 'department.name' is not in getRelatedFilterableColumns
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage("Filtered column 'department.name' is not declared in filterable columns");
-        
+
         $service->findAll([
             'dept_name' => 'Test Department',
         ]);
     }
 }
-

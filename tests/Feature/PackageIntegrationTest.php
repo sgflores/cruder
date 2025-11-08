@@ -3,10 +3,10 @@
 namespace SgFlores\Cruder\Tests\Feature;
 
 use PHPUnit\Framework\Attributes\Test;
-use SgFlores\Cruder\Tests\TestCase;
-use SgFlores\Cruder\Tests\Services\TestUserService;
-use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\CruderServiceProvider;
+use SgFlores\Cruder\Tests\Models\User;
+use SgFlores\Cruder\Tests\Services\TestUserService;
+use SgFlores\Cruder\Tests\TestCase;
 
 class PackageIntegrationTest extends TestCase
 {
@@ -19,12 +19,11 @@ class PackageIntegrationTest extends TestCase
         );
     }
 
-
     #[Test]
     public function it_can_instantiate_base_crud_service()
     {
-        $service = new TestUserService(new User());
-        
+        $service = new TestUserService(new User);
+
         $this->assertInstanceOf(TestUserService::class, $service);
     }
 }

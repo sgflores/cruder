@@ -2,27 +2,20 @@
 
 namespace SgFlores\Cruder\Examples;
 
+use App\Models\Category;
+use App\Models\Customer;
+use App\Models\Inventory;
+use App\Models\Order;
+use App\Models\Product;
+use Illuminate\Support\Facades\Log;
 use SgFlores\Cruder\BaseCrudService;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\ValidationService;
-use SgFlores\Cruder\Services\SearchService;
-use SgFlores\Cruder\Services\ExportService;
-use SgFlores\Cruder\Services\QueryLogger;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Customer;
-use App\Models\Inventory;
-use App\Models\Supplier;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Real-world example demonstrating BaseCrudService
  * using a Sales and Inventory Management System.
- * 
+ *
  * This example shows:
  * - Product management with categories and inventory
  * - Order processing with order items
@@ -34,8 +27,11 @@ use Illuminate\Support\Facades\Mail;
 class SalesInventoryExample
 {
     protected ProductCrudService $productService;
+
     protected OrderCrudService $orderService;
+
     protected CustomerCrudService $customerService;
+
     protected InventoryCrudService $inventoryService;
 
     public function __construct(
@@ -52,7 +48,7 @@ class SalesInventoryExample
 
     /**
      * Example 1: Product Management with Categories and Inventory
-     * 
+     *
      * Demonstrates CRUD operations for products with automatic
      * category assignment and inventory creation.
      */
@@ -69,14 +65,14 @@ class SalesInventoryExample
             'cost' => 120.00,
             'category_id' => 1,
             'supplier_id' => 1,
-            'status' => 'active'
+            'status' => 'active',
         ];
 
         $inventoryData = [
             'quantity' => 100,
             'min_stock_level' => 10,
             'max_stock_level' => 500,
-            'location' => 'Warehouse A, Shelf 1'
+            'location' => 'Warehouse A, Shelf 1',
         ];
 
         // Set up event listener for automatic inventory creation
@@ -84,11 +80,11 @@ class SalesInventoryExample
             // Create inventory record
             $inventoryData['product_id'] = $product->id;
             $this->inventoryService->create($inventoryData);
-            
+
             Log::info('Product created with inventory', [
                 'product_id' => $product->id,
                 'sku' => $product->sku,
-                'initial_stock' => $inventoryData['quantity']
+                'initial_stock' => $inventoryData['quantity'],
             ]);
         });
 
@@ -98,7 +94,7 @@ class SalesInventoryExample
         // 2. Update product information
         $updateData = [
             'price' => 179.99, // Price reduction
-            'description' => 'High-quality wireless headphones with active noise cancellation and 30-hour battery life'
+            'description' => 'High-quality wireless headphones with active noise cancellation and 30-hour battery life',
         ];
 
         $updatedProduct = $this->productService->update($product->id, $updateData, ['category', 'inventory']);
@@ -113,7 +109,7 @@ class SalesInventoryExample
                 'cost' => 45.00,
                 'category_id' => 2,
                 'supplier_id' => 1,
-                'status' => 'active'
+                'status' => 'active',
             ],
             [
                 'name' => 'Mechanical Keyboard',
@@ -122,8 +118,8 @@ class SalesInventoryExample
                 'cost' => 85.00,
                 'category_id' => 2,
                 'supplier_id' => 2,
-                'status' => 'active'
-            ]
+                'status' => 'active',
+            ],
         ];
 
         $this->productService->getEventService()->listen(EventService::AFTER_BULK_CREATE, function ($data) {
@@ -135,7 +131,7 @@ class SalesInventoryExample
                         'quantity' => 50,
                         'min_stock_level' => 5,
                         'max_stock_level' => 200,
-                        'location' => 'Warehouse B, Shelf 2'
+                        'location' => 'Warehouse B, Shelf 2',
                     ]);
                 }
             }
@@ -147,7 +143,7 @@ class SalesInventoryExample
 
     /**
      * Example 2: Order Processing with Order Items
-     * 
+     *
      * Demonstrates creating orders with multiple items and
      * automatic inventory updates.
      */
@@ -161,7 +157,7 @@ class SalesInventoryExample
             'email' => 'john.smith@example.com',
             'phone' => '+1-555-0123',
             'address' => '123 Main St, New York, NY 10001',
-            'status' => 'active'
+            'status' => 'active',
         ];
 
         $customer = $this->customerService->create($customerData);
@@ -170,14 +166,14 @@ class SalesInventoryExample
         // 2. Create an order with multiple items
         $orderData = [
             'customer_id' => $customer->id,
-            'order_number' => 'ORD-' . time(),
+            'order_number' => 'ORD-'.time(),
             'status' => 'pending',
             'subtotal' => 0, // Will be calculated
             'tax_amount' => 0,
             'shipping_amount' => 9.99,
             'total_amount' => 0, // Will be calculated
             'shipping_address' => $customer->address,
-            'billing_address' => $customer->address
+            'billing_address' => $customer->address,
         ];
 
         $orderItems = [
@@ -185,47 +181,47 @@ class SalesInventoryExample
                 'product_id' => 1, // Wireless Headphones
                 'quantity' => 2,
                 'unit_price' => 179.99,
-                'total_price' => 359.98
+                'total_price' => 359.98,
             ],
             [
                 'product_id' => 2, // Gaming Mouse
                 'quantity' => 1,
                 'unit_price' => 79.99,
-                'total_price' => 79.99
-            ]
+                'total_price' => 79.99,
+            ],
         ];
 
         // Set up event listener for order items and inventory updates
         $this->orderService->getEventService()->listen(EventService::AFTER_CREATE, function ($order) use ($orderItems) {
             $subtotal = 0;
-            
+
             foreach ($orderItems as $itemData) {
                 $itemData['order_id'] = $order->id;
                 $order->items()->create($itemData);
                 $subtotal += $itemData['total_price'];
-                
+
                 // Update inventory
                 $this->updateInventory($itemData['product_id'], $itemData['quantity']);
             }
-            
+
             // Update order totals
             $taxAmount = $subtotal * 0.08; // 8% tax
             $totalAmount = $subtotal + $taxAmount + $order->shipping_amount;
-            
+
             $order->update([
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
-                'total_amount' => $totalAmount
+                'total_amount' => $totalAmount,
             ]);
-            
+
             // Send order confirmation email
             $this->sendOrderConfirmation($order);
-            
+
             Log::info('Order processed with items and inventory updated', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
                 'total_amount' => $totalAmount,
-                'items_count' => count($orderItems)
+                'items_count' => count($orderItems),
             ]);
         });
 
@@ -245,7 +241,7 @@ class SalesInventoryExample
 
     /**
      * Example 3: Advanced Product Search and Filtering
-     * 
+     *
      * Demonstrates the power of BaseCrudService for complex queries.
      */
     public function searchAndFilterProducts()
@@ -257,7 +253,7 @@ class SalesInventoryExample
             'search' => 'wireless',
             'status' => 'active',
             'sort_by' => 'price',
-            'sort_direction' => 'asc'
+            'sort_direction' => 'asc',
         ], ['category', 'inventory']);
 
         echo "Found {$searchResults->count()} wireless products\n";
@@ -266,11 +262,11 @@ class SalesInventoryExample
         $priceFiltered = $this->productService->findAll([
             'price' => [
                 'operator' => 'between',
-                'value' => [50, 200]
+                'value' => [50, 200],
             ],
             'status' => 'active',
             'sort_by' => 'price',
-            'sort_direction' => 'asc'
+            'sort_direction' => 'asc',
         ], ['category', 'inventory']);
 
         echo "Found {$priceFiltered->count()} products between \$50-\$200\n";
@@ -278,7 +274,7 @@ class SalesInventoryExample
         // 3. Filter by category with low stock
         $lowStockProducts = $this->productService->findAll([
             'category_id' => 1,
-            'status' => 'active'
+            'status' => 'active',
         ], ['category', 'inventory']);
 
         $lowStock = $lowStockProducts->filter(function ($product) {
@@ -292,7 +288,7 @@ class SalesInventoryExample
             'paginate' => 10, // 10 items per page
             'status' => 'active',
             'sort_by' => 'created_at',
-            'sort_direction' => 'desc'
+            'sort_direction' => 'desc',
         ], ['category']);
 
         echo "Paginated results: Page {$paginatedResults->currentPage()} of {$paginatedResults->lastPage()}\n";
@@ -301,7 +297,7 @@ class SalesInventoryExample
 
     /**
      * Example 4: Sales Analytics and Reporting
-     * 
+     *
      * Demonstrates complex queries for business intelligence.
      */
     public function salesAnalytics()
@@ -312,11 +308,11 @@ class SalesInventoryExample
         $recentOrders = $this->orderService->findAll([
             'created_at' => [
                 'operator' => 'gte',
-                'value' => now()->subDays(30)->toDateString()
+                'value' => now()->subDays(30)->toDateString(),
             ],
             'status' => ['shipped', 'delivered'],
             'sort_by' => 'created_at',
-            'sort_direction' => 'desc'
+            'sort_direction' => 'desc',
         ], ['customer', 'items.product']);
 
         echo "Recent orders (last 30 days): {$recentOrders->count()}\n";
@@ -327,7 +323,7 @@ class SalesInventoryExample
 
         // 3. Get top customers by order count
         $topCustomers = $this->customerService->findAll([
-            'status' => 'active'
+            'status' => 'active',
         ], ['orders']);
 
         $topCustomersByOrders = $topCustomers->sortByDesc(function ($customer) {
@@ -341,7 +337,7 @@ class SalesInventoryExample
 
         // 4. Get low stock products
         $lowStockProducts = $this->productService->findAll([
-            'status' => 'active'
+            'status' => 'active',
         ], ['inventory']);
 
         $lowStock = $lowStockProducts->filter(function ($product) {
@@ -358,7 +354,7 @@ class SalesInventoryExample
 
     /**
      * Example 5: Inventory Management
-     * 
+     *
      * Demonstrates inventory operations and stock management.
      */
     public function inventoryManagement()
@@ -369,8 +365,8 @@ class SalesInventoryExample
         $lowStockInventory = $this->inventoryService->findAll([
             'quantity' => [
                 'operator' => 'lte',
-                'value' => 10
-            ]
+                'value' => 10,
+            ],
         ], ['product']);
 
         echo "Low stock items: {$lowStockInventory->count()}\n";
@@ -378,14 +374,14 @@ class SalesInventoryExample
         // 2. Update inventory levels
         $inventoryUpdates = [
             ['product_id' => 1, 'quantity' => 150], // Restock headphones
-            ['product_id' => 2, 'quantity' => 75]   // Restock mouse
+            ['product_id' => 2, 'quantity' => 75],   // Restock mouse
         ];
 
         foreach ($inventoryUpdates as $update) {
             $inventory = $this->inventoryService->findById($update['product_id']);
             if ($inventory) {
                 $this->inventoryService->update($inventory->id, [
-                    'quantity' => $update['quantity']
+                    'quantity' => $update['quantity'],
                 ]);
                 echo "Updated inventory for product {$update['product_id']}: {$update['quantity']} units\n";
             }
@@ -394,7 +390,7 @@ class SalesInventoryExample
         // 3. Bulk update inventory for multiple products
         $bulkInventoryData = [
             ['product_id' => 3, 'quantity' => 200, 'location' => 'Warehouse C, Shelf 3'],
-            ['product_id' => 4, 'quantity' => 100, 'location' => 'Warehouse C, Shelf 4']
+            ['product_id' => 4, 'quantity' => 100, 'location' => 'Warehouse C, Shelf 4'],
         ];
 
         $this->inventoryService->bulkCreate($bulkInventoryData);
@@ -403,7 +399,7 @@ class SalesInventoryExample
 
     /**
      * Example 6: Event-Driven Business Logic
-     * 
+     *
      * Demonstrates complex business rules using event listeners.
      */
     public function eventDrivenBusinessLogic()
@@ -421,18 +417,18 @@ class SalesInventoryExample
             'cost' => 180.00,
             'category_id' => 3,
             'supplier_id' => 1,
-            'status' => 'active'
+            'status' => 'active',
         ], ['category', 'inventory']);
 
         // 2. Create an order (triggers inventory updates and notifications)
         $order = $this->orderService->create([
             'customer_id' => 1,
-            'order_number' => 'ORD-EVENT-' . time(),
+            'order_number' => 'ORD-EVENT-'.time(),
             'status' => 'pending',
             'subtotal' => 299.99,
             'tax_amount' => 24.00,
             'shipping_amount' => 9.99,
-            'total_amount' => 333.98
+            'total_amount' => 333.98,
         ], ['customer']);
 
         // 3. Update order status (triggers shipping notification)
@@ -443,7 +439,7 @@ class SalesInventoryExample
 
     /**
      * Example 7: Performance Monitoring and Caching
-     * 
+     *
      * Demonstrates performance features and caching.
      */
     public function performanceExample()
@@ -452,10 +448,10 @@ class SalesInventoryExample
 
         // 1. Enable caching for product queries
         $startTime = microtime(true);
-        
+
         $products = $this->productService->findAll([
             'status' => 'active',
-            'sort_by' => 'name'
+            'sort_by' => 'name',
         ], ['category']);
 
         $endTime = microtime(true);
@@ -466,7 +462,7 @@ class SalesInventoryExample
 
         // 2. Use chunked processing for large datasets
         $this->productService->findAllChunked([
-            'status' => 'active'
+            'status' => 'active',
         ], function ($products) {
             echo "Processing chunk of {$products->count()} products\n";
             // Process each chunk (e.g., send emails, update records, etc.)
@@ -483,7 +479,7 @@ class SalesInventoryExample
         if ($inventory) {
             $newQuantity = $inventory->quantity - $quantity;
             $this->inventoryService->update($inventory->id, [
-                'quantity' => $newQuantity
+                'quantity' => $newQuantity,
             ]);
 
             // Check for low stock
@@ -498,7 +494,7 @@ class SalesInventoryExample
         // Email sending logic
         Log::info('Order confirmation sent', [
             'order_id' => $order->id,
-            'customer_email' => $order->customer->email
+            'customer_email' => $order->customer->email,
         ]);
     }
 
@@ -507,7 +503,7 @@ class SalesInventoryExample
         // Shipping notification logic
         Log::info('Shipping notification sent', [
             'order_id' => $order->id,
-            'tracking_number' => 'TRK-' . time()
+            'tracking_number' => 'TRK-'.time(),
         ]);
     }
 
@@ -517,7 +513,7 @@ class SalesInventoryExample
         Log::warning('Low stock alert', [
             'product_id' => $inventory->product_id,
             'current_quantity' => $inventory->quantity,
-            'min_stock_level' => $inventory->min_stock_level
+            'min_stock_level' => $inventory->min_stock_level,
         ]);
     }
 
@@ -531,13 +527,13 @@ class SalesInventoryExample
                 'quantity' => 100,
                 'min_stock_level' => 10,
                 'max_stock_level' => 500,
-                'location' => 'Main Warehouse'
+                'location' => 'Main Warehouse',
             ]);
 
             // Notify suppliers
             Log::info('New product added, supplier notified', [
                 'product_id' => $product->id,
-                'supplier_id' => $product->supplier_id
+                'supplier_id' => $product->supplier_id,
             ]);
         });
 
@@ -549,7 +545,7 @@ class SalesInventoryExample
             // Reserve inventory
             Log::info('Inventory reserved for order', [
                 'order_id' => $order->id,
-                'order_number' => $order->order_number
+                'order_number' => $order->order_number,
             ]);
         });
 
@@ -560,7 +556,7 @@ class SalesInventoryExample
             } elseif ($order->status === 'cancelled') {
                 // Restore inventory
                 Log::info('Order cancelled, inventory restored', [
-                    'order_id' => $order->id
+                    'order_id' => $order->id,
                 ]);
             }
         });
@@ -583,21 +579,21 @@ class ProductCrudService extends BaseCrudService
     public function getDirectFilterableColumns(): array
     {
         return [
-            'name', 'sku', 'price', 'cost', 'category_id', 'supplier_id', 'status'
+            'name', 'sku', 'price', 'cost', 'category_id', 'supplier_id', 'status',
         ];
     }
 
     public function getDirectSortableColumns(): array
     {
         return [
-            'name', 'sku', 'price', 'cost', 'created_at', 'updated_at'
+            'name', 'sku', 'price', 'cost', 'created_at', 'updated_at',
         ];
     }
 
     public function getDirectTextSearchColumns(): array
     {
         return [
-            'name', 'description', 'sku'
+            'name', 'description', 'sku',
         ];
     }
 
@@ -628,21 +624,21 @@ class OrderCrudService extends BaseCrudService
     public function getDirectFilterableColumns(): array
     {
         return [
-            'customer_id', 'order_number', 'status', 'total_amount'
+            'customer_id', 'order_number', 'status', 'total_amount',
         ];
     }
 
     public function getDirectSortableColumns(): array
     {
         return [
-            'order_number', 'status', 'total_amount', 'created_at', 'updated_at'
+            'order_number', 'status', 'total_amount', 'created_at', 'updated_at',
         ];
     }
 
     public function getDirectTextSearchColumns(): array
     {
         return [
-            'order_number'
+            'order_number',
         ];
     }
 
@@ -673,21 +669,21 @@ class CustomerCrudService extends BaseCrudService
     public function getDirectFilterableColumns(): array
     {
         return [
-            'name', 'email', 'phone', 'status'
+            'name', 'email', 'phone', 'status',
         ];
     }
 
     public function getDirectSortableColumns(): array
     {
         return [
-            'name', 'email', 'status', 'created_at', 'updated_at'
+            'name', 'email', 'status', 'created_at', 'updated_at',
         ];
     }
 
     public function getDirectTextSearchColumns(): array
     {
         return [
-            'name', 'email'
+            'name', 'email',
         ];
     }
 
@@ -718,21 +714,21 @@ class InventoryCrudService extends BaseCrudService
     public function getDirectFilterableColumns(): array
     {
         return [
-            'product_id', 'quantity', 'min_stock_level', 'max_stock_level', 'location'
+            'product_id', 'quantity', 'min_stock_level', 'max_stock_level', 'location',
         ];
     }
 
     public function getDirectSortableColumns(): array
     {
         return [
-            'product_id', 'quantity', 'min_stock_level', 'max_stock_level', 'created_at', 'updated_at'
+            'product_id', 'quantity', 'min_stock_level', 'max_stock_level', 'created_at', 'updated_at',
         ];
     }
 
     public function getDirectTextSearchColumns(): array
     {
         return [
-            'location'
+            'location',
         ];
     }
 

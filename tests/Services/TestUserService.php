@@ -2,37 +2,37 @@
 
 namespace SgFlores\Cruder\Tests\Services;
 
+use Illuminate\Database\Eloquent\Builder;
 use SgFlores\Cruder\BaseCrudService;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\ExportService;
-use SgFlores\Cruder\Services\SearchService;
 use SgFlores\Cruder\Services\QueryLogger;
+use SgFlores\Cruder\Services\SearchService;
 use SgFlores\Cruder\Strategies\Export\CsvExportStrategy;
 use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
 use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 use SgFlores\Cruder\Tests\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 
 class TestUserService extends BaseCrudService
 {
     public function __construct(User $user)
     {
         // Create services for testing
-        $eventService = new EventService();
-        
+        $eventService = new EventService;
+
         // Pass only EventService to BaseCrudService constructor
         parent::__construct($user, $eventService);
 
         // Now manually inject the other services into the parent BaseReaderService
-        $searchService = new SearchService();
-        $exportService = new ExportService();
-        $queryLogger = new QueryLogger();
-        
+        $searchService = new SearchService;
+        $exportService = new ExportService;
+        $queryLogger = new QueryLogger;
+
         // Initialize services with strategies
-        $searchService->addStrategy(LikeSearchStrategy::key(), new LikeSearchStrategy());
-        $exportService->addStrategyByKey(new CsvExportStrategy());
-        $exportService->addStrategyByKey(new JsonExportStrategy());
-        
+        $searchService->addStrategy(LikeSearchStrategy::key(), new LikeSearchStrategy);
+        $exportService->addStrategyByKey(new CsvExportStrategy);
+        $exportService->addStrategyByKey(new JsonExportStrategy);
+
         // Manually set the services in the parent BaseReaderService
         $this->searchService = $searchService;
         $this->exportService = $exportService;
@@ -43,7 +43,7 @@ class TestUserService extends BaseCrudService
             // Simulate sending welcome email
             return $user;
         });
-        
+
         $eventService->listen(EventService::BEFORE_UPDATE, function ($data) {
             return $data;
         });
@@ -172,7 +172,6 @@ class TestUserService extends BaseCrudService
     {
         return 1000;
     }
-
 
     public function getDatabaseConnection(): ?string
     {

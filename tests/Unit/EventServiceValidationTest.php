@@ -2,36 +2,38 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
-use PHPUnit\Framework\Attributes\Test;
-use SgFlores\Cruder\Services\EventService;
-use SgFlores\Cruder\Tests\Services\TestUserService;
-use SgFlores\Cruder\Tests\Models\User;
-use SgFlores\Cruder\Tests\Models\Department;
-use SgFlores\Cruder\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use PHPUnit\Framework\Attributes\Test;
+use SgFlores\Cruder\Services\EventService;
+use SgFlores\Cruder\Tests\Models\Department;
+use SgFlores\Cruder\Tests\Models\User;
+use SgFlores\Cruder\Tests\Services\TestUserService;
+use SgFlores\Cruder\Tests\TestCase;
 
 class EventServiceValidationTest extends TestCase
 {
     use RefreshDatabase;
 
     protected TestUserService $userService;
+
     protected User $user;
+
     protected Department $department;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->userService = new TestUserService(new User());
-        
+
+        $this->userService = new TestUserService(new User);
+
         // Create department first
         $this->department = Department::create([
             'name' => 'Test Department',
             'code' => 'TEST',
-            'description' => 'Test Department for testing'
+            'description' => 'Test Department for testing',
         ]);
-        
+
         // Create test data
         $this->user = User::create([
             'name' => 'John Doe',
@@ -62,7 +64,8 @@ class EventServiceValidationTest extends TestCase
     public function it_works_without_event_service_provided()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User()) extends \SgFlores\Cruder\BaseCrudService {
+        $serviceWithoutEvents = new class(new User) extends \SgFlores\Cruder\BaseCrudService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No EventService provided
@@ -129,7 +132,8 @@ class EventServiceValidationTest extends TestCase
     public function it_throws_exception_when_adding_event_listener_without_event_service()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User()) extends \SgFlores\Cruder\BaseCrudService {
+        $serviceWithoutEvents = new class(new User) extends \SgFlores\Cruder\BaseCrudService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No EventService provided
@@ -179,7 +183,7 @@ class EventServiceValidationTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('EventService is required for event functionality');
 
-        $serviceWithoutEvents->addEventListener(EventService::BEFORE_CREATE, function($data) {
+        $serviceWithoutEvents->addEventListener(EventService::BEFORE_CREATE, function ($data) {
             return $data;
         });
     }
@@ -188,7 +192,8 @@ class EventServiceValidationTest extends TestCase
     public function it_returns_null_event_service_when_not_provided()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User()) extends \SgFlores\Cruder\BaseCrudService {
+        $serviceWithoutEvents = new class(new User) extends \SgFlores\Cruder\BaseCrudService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No EventService provided
@@ -248,7 +253,8 @@ class EventServiceValidationTest extends TestCase
     public function it_handles_bulk_operations_without_event_service()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User()) extends \SgFlores\Cruder\BaseCrudService {
+        $serviceWithoutEvents = new class(new User) extends \SgFlores\Cruder\BaseCrudService
+        {
             public function __construct(User $user)
             {
                 parent::__construct($user); // No EventService provided

@@ -9,28 +9,28 @@ use SgFlores\Cruder\Tests\Models\Department;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
 use SgFlores\Cruder\Tests\TestCase;
-use SgFlores\Cruder\Strategies\Search\LikeSearchStrategy;
 
 class SearchStrategyIntegrationTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
     protected TestUserService $userService;
+
     protected Department $department;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Run migrations
-        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
-        
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+
         // Create test data
         $this->department = Department::factory()->create();
-        
+
         // Create service instance
-        $this->userService = new TestUserService(new User());
-        
+        $this->userService = new TestUserService(new User);
+
         // Mock Auth for audit trail tests
         Auth::shouldReceive('check')->andReturn(true);
         Auth::shouldReceive('id')->andReturn(1);
@@ -46,19 +46,19 @@ class SearchStrategyIntegrationTest extends TestCase
         $users = collect([
             User::factory()->create([
                 'name' => 'John Smith',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
             User::factory()->create([
                 'name' => 'Jane Doe',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
             User::factory()->create([
                 'name' => 'Bob Johnson',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
             User::factory()->create([
                 'name' => 'Alice Smith',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
         ]);
 
@@ -90,14 +90,14 @@ class SearchStrategyIntegrationTest extends TestCase
         for ($i = 1; $i <= 10; $i++) {
             $users->push(User::factory()->create([
                 'name' => "User {$i}",
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]));
         }
 
         // Test search with pagination
         $paginatedResults = $this->userService->findAll([
             'search' => 'User',
-            'per_page' => 5
+            'per_page' => 5,
         ]);
 
         $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $paginatedResults);
@@ -109,7 +109,7 @@ class SearchStrategyIntegrationTest extends TestCase
         $sortedResults = $this->userService->findAll([
             'search' => 'User',
             'sort_by' => 'name',
-            'sort_direction' => 'desc'
+            'sort_direction' => 'desc',
         ]);
 
         $this->assertGreaterThanOrEqual(10, $sortedResults->count());
@@ -144,20 +144,20 @@ class SearchStrategyIntegrationTest extends TestCase
         // Test search within specific department
         $itSearchResults = $this->userService->findAll([
             'search' => 'User',
-            'department_id' => $itDept->id
+            'department_id' => $itDept->id,
         ]);
 
         $this->assertCount(2, $itSearchResults);
-        $this->assertTrue($itSearchResults->pluck('department_id')->every(fn($id) => $id === $itDept->id));
+        $this->assertTrue($itSearchResults->pluck('department_id')->every(fn ($id) => $id === $itDept->id));
 
         // Test search within HR department
         $hrSearchResults = $this->userService->findAll([
             'search' => 'User',
-            'department_id' => $hrDept->id
+            'department_id' => $hrDept->id,
         ]);
 
         $this->assertCount(2, $hrSearchResults);
-        $this->assertTrue($hrSearchResults->pluck('department_id')->every(fn($id) => $id === $hrDept->id));
+        $this->assertTrue($hrSearchResults->pluck('department_id')->every(fn ($id) => $id === $hrDept->id));
 
         // Test search across all departments
         $allSearchResults = $this->userService->findAll(['search' => 'User']);
@@ -170,19 +170,19 @@ class SearchStrategyIntegrationTest extends TestCase
         $users = collect([
             User::factory()->create([
                 'name' => 'John-Paul Smith',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
             User::factory()->create([
                 'name' => 'Mary Jane Watson',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
             User::factory()->create([
                 'name' => 'Dr. Sarah Johnson',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
             User::factory()->create([
                 'name' => 'O\'Connor, Michael',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
         ]);
 
@@ -214,7 +214,7 @@ class SearchStrategyIntegrationTest extends TestCase
         for ($i = 1; $i <= 100; $i++) {
             $users->push(User::factory()->create([
                 'name' => "User {$i}",
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]));
         }
 
@@ -227,7 +227,7 @@ class SearchStrategyIntegrationTest extends TestCase
         // Test pagination performance
         $paginatedResults = $this->userService->findAll([
             'search' => 'User',
-            'per_page' => 20
+            'per_page' => 20,
         ]);
         $this->assertEquals(20, $paginatedResults->perPage());
         $this->assertEquals(100, $paginatedResults->total());
@@ -236,7 +236,7 @@ class SearchStrategyIntegrationTest extends TestCase
         $sortedResults = $this->userService->findAll([
             'search' => 'User',
             'sort_by' => 'name',
-            'sort_direction' => 'asc'
+            'sort_direction' => 'asc',
         ]);
         $this->assertCount(100, $sortedResults);
 
@@ -253,15 +253,15 @@ class SearchStrategyIntegrationTest extends TestCase
         $users = collect([
             User::factory()->create([
                 'name' => 'User@#$%',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
             User::factory()->create([
                 'name' => 'User 123',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
             User::factory()->create([
                 'name' => 'User with spaces',
-                'department_id' => $this->department->id
+                'department_id' => $this->department->id,
             ]),
         ]);
 
@@ -298,11 +298,11 @@ class SearchStrategyIntegrationTest extends TestCase
         // Create users in departments
         $itUser = User::factory()->create([
             'name' => 'John Doe',
-            'department_id' => $itDept->id
+            'department_id' => $itDept->id,
         ]);
         $hrUser = User::factory()->create([
             'name' => 'Jane Smith',
-            'department_id' => $hrDept->id
+            'department_id' => $hrDept->id,
         ]);
 
         // Test search by department name (related column)
@@ -323,7 +323,7 @@ class SearchStrategyIntegrationTest extends TestCase
     {
         // Test with invalid search strategy
         $this->expectException(\InvalidArgumentException::class);
-        
+
         // This should throw an exception if we try to use a non-existent strategy
         $this->userService->findAll(['strategies' => 'nonexistent']);
     }
@@ -333,15 +333,15 @@ class SearchStrategyIntegrationTest extends TestCase
         // Create test user
         User::factory()->create([
             'name' => 'Test User',
-            'department_id' => $this->department->id
+            'department_id' => $this->department->id,
         ]);
 
         // Test that strategies parameter accepts array format
         $results = $this->userService->findAll([
             'search' => 'Test User',
-            'strategies' => ['like']
+            'strategies' => ['like'],
         ]);
-        
+
         $this->assertGreaterThanOrEqual(1, $results->count());
         $this->assertTrue($results->pluck('name')->contains('Test User'));
     }
@@ -351,15 +351,15 @@ class SearchStrategyIntegrationTest extends TestCase
         // Create test user
         User::factory()->create([
             'name' => 'Test User',
-            'department_id' => $this->department->id
+            'department_id' => $this->department->id,
         ]);
 
         // Test that strategies parameter accepts comma-separated string format
         $results = $this->userService->findAll([
             'search' => 'Test User',
-            'strategies' => 'like'
+            'strategies' => 'like',
         ]);
-        
+
         $this->assertGreaterThanOrEqual(1, $results->count());
         $this->assertTrue($results->pluck('name')->contains('Test User'));
     }
@@ -369,7 +369,7 @@ class SearchStrategyIntegrationTest extends TestCase
         // Create a user
         $user = User::factory()->create([
             'name' => 'Test User',
-            'department_id' => $this->department->id
+            'department_id' => $this->department->id,
         ]);
 
         // Search for the user
@@ -388,11 +388,11 @@ class SearchStrategyIntegrationTest extends TestCase
         // Create users
         $activeUser = User::factory()->create([
             'name' => 'Active User',
-            'department_id' => $this->department->id
+            'department_id' => $this->department->id,
         ]);
         $deletedUser = User::factory()->create([
             'name' => 'Deleted User',
-            'department_id' => $this->department->id
+            'department_id' => $this->department->id,
         ]);
 
         // Soft delete one user
@@ -410,7 +410,7 @@ class SearchStrategyIntegrationTest extends TestCase
         // Create test users
         User::factory()->count(5)->create([
             'name' => 'Test User',
-            'department_id' => $this->department->id
+            'department_id' => $this->department->id,
         ]);
 
         // Test CSV export with search

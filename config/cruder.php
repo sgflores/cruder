@@ -12,9 +12,9 @@ return [
     */
     'query_logging' => [
         'enabled' => env('CRUDER_QUERY_LOGGING_ENABLED', false),
-        
+
         'log_all_operations' => env('CRUDER_LOG_ALL_OPERATIONS', true),
-        
+
         'operations' => [
             'find' => env('CRUDER_LOG_FIND_OPERATIONS', true),
             'create' => env('CRUDER_LOG_CREATE_OPERATIONS', true),
@@ -25,17 +25,17 @@ return [
             'bulk_update' => env('CRUDER_LOG_BULK_UPDATE_OPERATIONS', true),
             'bulk_delete' => env('CRUDER_LOG_BULK_DELETE_OPERATIONS', true),
         ],
-        
+
         'log_level' => env('CRUDER_QUERY_LOG_LEVEL', 'debug'), // debug, info, warning, error
-        
+
         'include_bindings' => env('CRUDER_INCLUDE_QUERY_BINDINGS', true),
-        
+
         'include_execution_time' => env('CRUDER_INCLUDE_EXECUTION_TIME', true),
-        
+
         'slow_query_threshold' => env('CRUDER_SLOW_QUERY_THRESHOLD', 1000), // milliseconds
-        
+
         'log_slow_queries_only' => env('CRUDER_LOG_SLOW_QUERIES_ONLY', false),
-        
+
         'channels' => [
             'default' => env('CRUDER_QUERY_LOG_CHANNEL', 'daily'),
             'slow_queries' => env('CRUDER_SLOW_QUERY_LOG_CHANNEL', 'daily'),

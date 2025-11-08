@@ -2,7 +2,6 @@
 
 namespace SgFlores\Cruder\Tests\Unit\Strategies\Export;
 
-use Illuminate\Support\Collection;
 use SgFlores\Cruder\Strategies\Export\JsonExportStrategy;
 use SgFlores\Cruder\Tests\UnitTestCase;
 
@@ -13,7 +12,7 @@ class JsonExportStrategyTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new JsonExportStrategy();
+        $this->strategy = new JsonExportStrategy;
     }
 
     public function test_key_returns_json(): void
@@ -25,14 +24,14 @@ class JsonExportStrategyTest extends UnitTestCase
     {
         $data = collect([]);
         $result = $this->strategy->export($data);
-        
+
         $this->assertEquals('[]', $result);
     }
 
     public function test_export_with_pretty_print(): void
     {
         $data = collect([
-            (object) ['name' => 'John Doe', 'email' => 'john@example.com']
+            (object) ['name' => 'John Doe', 'email' => 'john@example.com'],
         ]);
 
         $result = $this->strategy->export($data);
@@ -45,7 +44,7 @@ class JsonExportStrategyTest extends UnitTestCase
     public function test_export_without_pretty_print(): void
     {
         $data = collect([
-            (object) ['name' => 'John Doe', 'email' => 'john@example.com']
+            (object) ['name' => 'John Doe', 'email' => 'john@example.com'],
         ]);
 
         $options = ['pretty_print' => false];
@@ -58,7 +57,7 @@ class JsonExportStrategyTest extends UnitTestCase
     public function test_export_with_specific_columns(): void
     {
         $data = collect([
-            (object) ['name' => 'John Doe', 'email' => 'john@example.com', 'age' => 30]
+            (object) ['name' => 'John Doe', 'email' => 'john@example.com', 'age' => 30],
         ]);
 
         $options = ['columns' => ['name', 'email']];
@@ -73,12 +72,12 @@ class JsonExportStrategyTest extends UnitTestCase
     public function test_export_with_json_flags(): void
     {
         $data = collect([
-            (object) ['name' => 'José', 'email' => 'josé@example.com']
+            (object) ['name' => 'José', 'email' => 'josé@example.com'],
         ]);
 
         $options = [
             'pretty_print' => false,
-            'json_flags' => JSON_UNESCAPED_UNICODE
+            'json_flags' => JSON_UNESCAPED_UNICODE,
         ];
         $result = $this->strategy->export($data, $options);
 
@@ -90,7 +89,7 @@ class JsonExportStrategyTest extends UnitTestCase
     {
         $data = collect([
             (object) ['name' => 'John Doe', 'email' => 'john@example.com'],
-            (object) ['name' => 'Jane Smith', 'email' => 'jane@example.com']
+            (object) ['name' => 'Jane Smith', 'email' => 'jane@example.com'],
         ]);
 
         $result = $this->strategy->export($data);
@@ -106,8 +105,8 @@ class JsonExportStrategyTest extends UnitTestCase
         $data = collect([
             (object) [
                 'name' => 'John Doe',
-                'profile' => (object) ['age' => 30, 'city' => 'New York']
-            ]
+                'profile' => (object) ['age' => 30, 'city' => 'New York'],
+            ],
         ]);
 
         $result = $this->strategy->export($data);
@@ -123,8 +122,8 @@ class JsonExportStrategyTest extends UnitTestCase
             (object) [
                 'name' => 'John "Doe"',
                 'email' => 'john@example.com',
-                'description' => "Line 1\nLine 2"
-            ]
+                'description' => "Line 1\nLine 2",
+            ],
         ]);
 
         $result = $this->strategy->export($data);
@@ -140,8 +139,8 @@ class JsonExportStrategyTest extends UnitTestCase
             (object) [
                 'name' => 'John Doe',
                 'email' => null,
-                'age' => null
-            ]
+                'age' => null,
+            ],
         ]);
 
         $result = $this->strategy->export($data);
@@ -158,8 +157,8 @@ class JsonExportStrategyTest extends UnitTestCase
             (object) [
                 'name' => 'John Doe',
                 'active' => true,
-                'verified' => false
-            ]
+                'verified' => false,
+            ],
         ]);
 
         $result = $this->strategy->export($data);
@@ -176,8 +175,8 @@ class JsonExportStrategyTest extends UnitTestCase
                 'name' => 'John Doe',
                 'age' => 30,
                 'price' => 19.99,
-                'score' => 0
-            ]
+                'score' => 0,
+            ],
         ]);
 
         $result = $this->strategy->export($data);
@@ -193,8 +192,8 @@ class JsonExportStrategyTest extends UnitTestCase
         $data = collect([
             (object) [
                 'name' => 'John Doe',
-                'tags' => ['admin', 'user', 'moderator']
-            ]
+                'tags' => ['admin', 'user', 'moderator'],
+            ],
         ]);
 
         $result = $this->strategy->export($data);

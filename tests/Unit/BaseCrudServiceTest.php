@@ -2,28 +2,30 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
-use PHPUnit\Framework\Attributes\Test;
-use SgFlores\Cruder\Tests\Services\TestUserService;
-use SgFlores\Cruder\Tests\Models\User;
-use SgFlores\Cruder\Tests\Models\Department;
-use SgFlores\Cruder\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use PHPUnit\Framework\Attributes\Test;
+use SgFlores\Cruder\Tests\Models\Department;
+use SgFlores\Cruder\Tests\Models\User;
+use SgFlores\Cruder\Tests\Services\TestUserService;
+use SgFlores\Cruder\Tests\TestCase;
 
 class BaseCrudServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     protected TestUserService $userService;
+
     protected User $user;
+
     protected Department $department;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->userService = new TestUserService(new User());
-        
+
+        $this->userService = new TestUserService(new User);
+
         // Create test data
         $this->department = Department::create([
             'name' => 'IT Department',
@@ -165,8 +167,8 @@ class BaseCrudServiceTest extends TestCase
 
         $this->assertGreaterThanOrEqual(1, $itUsers->count());
         $this->assertGreaterThanOrEqual(1, $hrUsers->count());
-        $this->assertTrue($itUsers->pluck('department_id')->every(fn($id) => $id === $this->department->id));
-        $this->assertTrue($hrUsers->pluck('department_id')->every(fn($id) => $id === $newDepartment->id));
+        $this->assertTrue($itUsers->pluck('department_id')->every(fn ($id) => $id === $this->department->id));
+        $this->assertTrue($hrUsers->pluck('department_id')->every(fn ($id) => $id === $newDepartment->id));
     }
 
     #[Test]
@@ -180,11 +182,11 @@ class BaseCrudServiceTest extends TestCase
 
         $this->assertGreaterThanOrEqual(3, $usersAsc->count());
         $this->assertGreaterThanOrEqual(3, $usersDesc->count());
-        
+
         // Verify sorting order
         $ascNames = $usersAsc->pluck('name')->toArray();
         $descNames = $usersDesc->pluck('name')->toArray();
-        
+
         $this->assertEquals($ascNames, array_reverse($descNames));
     }
 
@@ -194,29 +196,29 @@ class BaseCrudServiceTest extends TestCase
         $oldUser = User::create([
             'name' => 'Old User',
             'department_id' => $this->department->id,
-            'created_at' => now()->subDays(2)
+            'created_at' => now()->subDays(2),
         ]);
         $newUser = User::create([
             'name' => 'New User',
             'department_id' => $this->department->id,
-            'created_at' => now()->subDay()
+            'created_at' => now()->subDay(),
         ]);
 
         // Test sorting with specific user IDs to ensure we get the right results
         $usersAsc = $this->userService->findAll([
-            'sort_by' => 'created_at', 
+            'sort_by' => 'created_at',
             'sort_direction' => 'asc',
-            'id' => [$oldUser->id, $newUser->id]
+            'id' => [$oldUser->id, $newUser->id],
         ]);
         $usersDesc = $this->userService->findAll([
-            'sort_by' => 'created_at', 
+            'sort_by' => 'created_at',
             'sort_direction' => 'desc',
-            'id' => [$oldUser->id, $newUser->id]
+            'id' => [$oldUser->id, $newUser->id],
         ]);
 
         $this->assertCount(2, $usersAsc);
         $this->assertCount(2, $usersDesc);
-        
+
         // Verify the oldest user is first in ASC order
         $this->assertEquals($oldUser->id, $usersAsc->first()->id);
         // Verify the newest user is first in DESC order
@@ -321,7 +323,7 @@ class BaseCrudServiceTest extends TestCase
         User::create(['name' => 'Test User', 'department_id' => $this->department->id]);
 
         $results = $this->userService->findAll(['search' => 'Test']);
-        
+
         // Verify search strategy is working
         $this->assertGreaterThanOrEqual(1, $results->count());
         $this->assertTrue($results->pluck('name')->contains('Test User'));

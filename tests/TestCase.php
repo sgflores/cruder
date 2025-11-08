@@ -13,10 +13,10 @@ abstract class TestCase extends OrchestraTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Set up database
-        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
-        
+        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
         // Run migrations
         $this->artisan('migrate', ['--database' => 'testing']);
     }
@@ -27,7 +27,7 @@ abstract class TestCase extends OrchestraTestCase
         if ($this->app['db']->transactionLevel() > 0) {
             $this->app['db']->rollBack();
         }
-        
+
         parent::tearDown();
     }
 
@@ -47,19 +47,19 @@ abstract class TestCase extends OrchestraTestCase
             'database' => ':memory:',
             'prefix' => '',
         ]);
-        
+
         // Setup cache
         $app['config']->set('cache.default', 'array');
         $app['config']->set('cache.stores.array', [
             'driver' => 'array',
         ]);
-        
+
         // Setup session
         $app['config']->set('session.driver', 'array');
-        
+
         // Setup queue
         $app['config']->set('queue.default', 'sync');
-        
+
         // Setup app
         $app['config']->set('app.env', 'testing');
         $app['config']->set('app.debug', true);
