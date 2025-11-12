@@ -2,23 +2,25 @@
 
 namespace SgFlores\Cruder;
 
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Http\Resources\Json\JsonResource;
+use Throwable;
+use Carbon\Carbon;
+use InvalidArgumentException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use InvalidArgumentException;
-use SgFlores\Cruder\Contracts\ReaderConfigurable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\ExportService;
-use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Services\SearchService;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Http\Resources\Json\JsonResource;
+use SgFlores\Cruder\Contracts\ReaderConfigurable;
 use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * Base Reader Service - Foundation for Read Operations
@@ -984,11 +986,21 @@ abstract class BaseReaderService implements ReaderConfigurable
     protected function applyAdvancedFilters(Builder $queryBuilder, array $queryOptions): void
     {
         $advancedFilters = [
+            // alias
             'gte' => '>=', 'gt' => '>', 'lte' => '<=', 'lt' => '<',
+            'eq' => '=',
             'like' => 'LIKE', 'not_like' => 'NOT LIKE',
             'in' => 'IN', 'not_in' => 'NOT IN',
             'between' => 'BETWEEN', 'not_between' => 'NOT BETWEEN',
             'is_null' => 'IS NULL', 'is_not_null' => 'IS NOT NULL',
+
+            // literal
+            '>=' => '>=', '>' => '>', '<=' => '<=', '<' => '<',
+            '=' => '=', 'LIKE' => 'LIKE', 'NOT LIKE' => 'NOT LIKE',
+            'IN' => 'IN', 'NOT IN' => 'NOT IN',
+            'BETWEEN' => 'BETWEEN', 'NOT BETWEEN' => 'NOT BETWEEN',
+            'IS NULL' => 'IS NULL', 'IS NOT NULL' => 'IS NOT NULL',
+            'IS NOT NULL' => 'IS NOT NULL',
         ];
 
         // Get all allowed filterable columns for validation
@@ -1115,47 +1127,63 @@ abstract class BaseReaderService implements ReaderConfigurable
     {
         switch ($operator) {
             case 'gte':
+            case '>=':
                 $queryBuilder->where($columnName, '>=', $value);
                 break;
             case 'gt':
+            case '>':
                 $queryBuilder->where($columnName, '>', $value);
                 break;
             case 'lte':
+            case '<=':
                 $queryBuilder->where($columnName, '<=', $value);
                 break;
             case 'lt':
+            case '<':
                 $queryBuilder->where($columnName, '<', $value);
                 break;
+            case 'eq':
+            case '=':
+                $queryBuilder->where($columnName, '=', $value);
+                break;
             case 'like':
+            case 'LIKE':
                 $queryBuilder->where($columnName, 'LIKE', $value);
                 break;
             case 'not_like':
+            case 'NOT LIKE':
                 $queryBuilder->where($columnName, 'NOT LIKE', $value);
                 break;
             case 'in':
+            case 'IN':
                 if (is_array($value)) {
                     $queryBuilder->whereIn($columnName, $value);
                 }
                 break;
             case 'not_in':
+            case 'NOT IN':
                 if (is_array($value)) {
                     $queryBuilder->whereNotIn($columnName, $value);
                 }
                 break;
             case 'between':
+            case 'BETWEEN':
                 if (is_array($value) && count($value) === 2) {
                     $queryBuilder->whereBetween($columnName, $value);
                 }
                 break;
             case 'not_between':
+            case 'NOT BETWEEN':
                 if (is_array($value) && count($value) === 2) {
                     $queryBuilder->whereNotBetween($columnName, $value);
                 }
                 break;
             case 'is_null':
+            case 'IS NULL':
                 $queryBuilder->whereNull($columnName);
                 break;
             case 'is_not_null':
+            case 'IS NOT NULL':
                 $queryBuilder->whereNotNull($columnName);
                 break;
         }
@@ -1195,6 +1223,78 @@ abstract class BaseReaderService implements ReaderConfigurable
         }
 
         return $transformed;
+    }
+
+    /**
+     * Merge a "between" style filter directly into the filters array.
+     *
+     * Accepts parameter keys for the from/to values, resolves them from the filters array,
+     * normalizes them (optionally formatting as dates), and injects the proper advanced
+     * filter structure (between/gte/lte). Any original parameter keys used for from/to
+     * are removed from the filters array.
+     *
+     * @param  array   $filters    Filters array (modified by reference).
+     * @param  string  $column     Actual database column to apply the constraint on.
+     * @param  string  $fromParam  Filter key containing the lower bound value.
+     * @param  string  $toParam    Filter key containing the upper bound value.
+     * @param  string|null $dateFormat Optional date format; when supplied, values are parsed via Carbon and formatted.
+     * @return void
+     */
+    protected function mergeBetweenFilter(
+        array &$filters,
+        string $column,
+        string $fromParam,
+        string $toParam,
+        ?string $dateFormat = null
+    ): void {
+        $fromValue = $filters[$fromParam] ?? null;
+        $toValue = $filters[$toParam] ?? null;
+        if (empty($fromValue) && empty($toValue)) {
+            unset($filters[$fromParam], $filters[$toParam]);
+            return;
+        }
+        
+        $from = $this->normalizeBetweenValue($fromValue, $dateFormat);
+        $to = $this->normalizeBetweenValue($toValue, $dateFormat);
+
+        if ($from && $to) {
+            $filters[$column] = [
+                'operator' => 'between',
+                'value' => [$from, $to],
+            ];
+        } elseif ($from) {
+            $filters[$column] = [
+                'operator' => 'gte',
+                'value' => $from,
+            ];
+        } elseif ($to) {
+            $filters[$column] = [
+                'operator' => 'lte',
+                'value' => $to,
+            ];
+        }
+
+        unset($filters[$fromParam], $filters[$toParam]);
+    }
+
+    /**
+     * Normalize the between values (optionally formatting as dates).
+     */
+    protected function normalizeBetweenValue(mixed $value, ?string $dateFormat = null): mixed
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! $dateFormat) {
+            return $value;
+        }
+
+        try {
+            return Carbon::parse($value)->format($dateFormat);
+        } catch (Throwable $e) {
+            return $value;
+        }
     }
 
     /**

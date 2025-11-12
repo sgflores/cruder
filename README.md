@@ -13,6 +13,7 @@ A powerful, feature-rich CRUD service package for Laravel applications built on 
 - **Advanced Filtering & Search** - Column-based filtering, sorting, and text search
 - **Search Strategy System** - Pluggable search strategies for custom search implementations
 - **Export Functionality** - CSV, JSON, and custom export formats
+- **Filter Helpers** - One-line helpers for common filter patterns such as between ranges
 - **Query Caching** - Built-in query caching with configurable lifetime
 - **Performance Monitoring** - Query logging and slow query detection
 - **Column Validation** - Secure column validation for all operations
@@ -137,9 +138,39 @@ $userService->bulkCreate([
 ]);
 ```
 
+### 3. Between Filter Helper
+
+`BaseReaderService` ships with a convenience helper for assembling range filters without hand-writing the advanced filter structure:
+
+```php
+$filters = [
+    'created_from' => '2025-01-01',
+    'created_to'   => '2025-01-31',
+];
+
+$this->mergeBetweenFilter(
+    $filters,
+    'orders.created_at', // actual database column
+    'created_from',      // input key for the lower bound
+    'created_to',        // input key for the upper bound
+    'Y-m-d'              // optional Carbon format
+);
+
+// $filters now contains:
+// [
+//     'orders.created_at' => [
+//         'operator' => 'between',
+//         'value'    => ['2025-01-01', '2025-01-31'],
+//     ],
+// ]
+
+// Resulting SQL fragment
+// where `orders`.`created_at` between '2025-01-01' and '2025-01-31'
+```
+
 > **📝 Note**: For export functionality, you'll need to extend `BaseReaderService` with `SearchService` and `ExportService` injected. See [Examples/README.md](Examples/README.md) for complete examples.
 
-### 3. Search Strategies
+### 4. Search Strategies
 
 Create custom search implementations for complex reporting and analytics using the strategy pattern.
 
