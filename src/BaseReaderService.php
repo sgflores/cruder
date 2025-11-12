@@ -20,7 +20,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use SgFlores\Cruder\Contracts\ReaderConfigurable;
 use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Base Reader Service - Foundation for Read Operations
