@@ -2,9 +2,8 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
-use Illuminate\Database\Eloquent\Model;
 use PHPUnit\Framework\TestCase;
-use SgFlores\Cruder\BaseReaderService;
+use SgFlores\Cruder\Tests\Unit\Helpers\TestReaderService;
 
 class MergeBetweenFilterTest extends TestCase
 {
@@ -109,22 +108,6 @@ class MergeBetweenFilterTest extends TestCase
             ],
             $filters['reports.generated_at']
         );
-    }
-}
-
-class TestReaderService extends BaseReaderService
-{
-    public function __construct()
-    {
-        parent::__construct(new class extends Model {
-            protected $table = 'test_models';
-            public $timestamps = false;
-        });
-    }
-
-    public function exposeMergeBetweenFilter(array &$filters, string $column, string $fromParam, string $toParam, ?string $dateFormat = null): void
-    {
-        $this->mergeBetweenFilter($filters, $column, $fromParam, $toParam, $dateFormat);
     }
 }
 
