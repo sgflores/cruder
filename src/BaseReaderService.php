@@ -1245,7 +1245,7 @@ abstract class BaseReaderService implements ReaderConfigurable
         string $column,
         string $fromParam,
         string $toParam,
-        ?string $dateFormat = null
+        ?string $dateFormat = 'Y-m-d'
     ): void {
         $fromValue = $filters[$fromParam] ?? null;
         $toValue = $filters[$toParam] ?? null;
@@ -1294,6 +1294,52 @@ abstract class BaseReaderService implements ReaderConfigurable
             return Carbon::parse($value)->format($dateFormat);
         } catch (Throwable $e) {
             return $value;
+        }
+    }
+
+    /**
+     * Normalize a month filter parameter into date range filters.
+     *
+     * Accepts a month parameter (e.g., "2025-11", "2025-11-01", "2025-11-15")
+     * and converts it to start of month and end of month date filters.
+     * The month parameter is removed from the filters array after processing.
+     *
+     * @param  array  $filters  Filters array (modified by reference).
+     * @param  string  $monthParam  Filter key containing the month value.
+     * @param  string  $fromParam  Filter key to set for the start of month.
+     * @param  string  $toParam  Filter key to set for the end of month.
+     * @param  string|null  $dateFormat  Optional date format; when supplied, values are formatted accordingly (default: 'Y-m-d').
+     * @return void
+     */
+    protected function normalizeMonthFilter(
+        array &$filters,
+        string $monthParam = 'month',
+        string $fromParam,
+        string $toParam,
+        ?string $dateFormat = 'Y-m-d'
+    ): void {
+        $monthValue = $filters[$monthParam] ?? null;
+        
+        if (empty($monthValue)) {
+            // Remove the month parameter even if it's empty
+            unset($filters[$monthParam]);
+            return;
+        }
+
+        try {
+            // Parse the month input (handles formats like "2025-11-01", "2025-11", etc.)
+            $date = Carbon::parse($monthValue);
+            
+            // Set from parameter to start of month
+            $filters[$fromParam] = $date->copy()->startOfMonth()->format($dateFormat);
+            
+            // Set to parameter to end of month
+            $filters[$toParam] = $date->copy()->endOfMonth()->format($dateFormat);
+            
+            // Remove the month parameter from filters
+            unset($filters[$monthParam]);
+        } catch (Throwable $e) {
+            unset($filters[$monthParam]);
         }
     }
 
