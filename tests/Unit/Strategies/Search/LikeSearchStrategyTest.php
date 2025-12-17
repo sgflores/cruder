@@ -39,6 +39,16 @@ class LikeSearchStrategyTest extends OrchestraTestCase
 
         $filters = ['search' => 'test search'];
 
+        // Mock the main model for table name
+        $mockModel = Mockery::mock();
+        $mockModel->shouldReceive('getTable')
+            ->once()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->once()
+            ->andReturn($mockModel);
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
@@ -49,10 +59,10 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             });
 
         $this->mockSubQuery->shouldReceive('orWhere')
-            ->with('name', 'like', '%test search%')
+            ->with('users.name', 'like', '%test search%')
             ->once();
         $this->mockSubQuery->shouldReceive('orWhere')
-            ->with('email', 'like', '%test search%')
+            ->with('users.email', 'like', '%test search%')
             ->once();
 
         $result = $this->strategy->search($this->mockQuery, $filters, $config);
@@ -137,7 +147,17 @@ class LikeSearchStrategyTest extends OrchestraTestCase
 
         $filters = ['search' => 'test search'];
 
-        // Mock the model chain
+        // Mock the main model for table name
+        $mockMainModel = Mockery::mock();
+        $mockMainModel->shouldReceive('getTable')
+            ->once()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->once()
+            ->andReturn($mockMainModel);
+
+        // Mock the model chain for related columns
         $mockModel = Mockery::mock();
         $mockRelation = Mockery::mock();
         $mockRelatedModel = Mockery::mock();
@@ -146,7 +166,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             ->once()
             ->with(Mockery::type('Closure'))
             ->andReturnUsing(function ($callback) use ($mockModel, $mockRelation, $mockRelatedModel) {
-                // Mock getModel() to return the model
+                // Mock getModel() to return the model for related columns
                 $this->mockSubQuery->shouldReceive('getModel')
                     ->once()
                     ->andReturn($mockModel);
@@ -171,12 +191,12 @@ class LikeSearchStrategyTest extends OrchestraTestCase
                 return $this->mockQuery;
             });
 
-        // Direct columns
+        // Direct columns - now qualified with table name
         $this->mockSubQuery->shouldReceive('orWhere')
-            ->with('name', 'like', '%test search%')
+            ->with('users.name', 'like', '%test search%')
             ->once();
         $this->mockSubQuery->shouldReceive('orWhere')
-            ->with('email', 'like', '%test search%')
+            ->with('users.email', 'like', '%test search%')
             ->once();
 
         // Related columns
@@ -207,6 +227,9 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         ];
 
         $filters = ['search' => 'test search'];
+
+        // getModel() is NOT called when there are no direct columns (optimized behavior)
+        // Only where() is called with an empty closure since both arrays are empty
 
         $this->mockQuery->shouldReceive('where')
             ->once()
@@ -359,6 +382,16 @@ class LikeSearchStrategyTest extends OrchestraTestCase
         $searchTerm = 'test%_search';
         $filters = ['search' => $searchTerm];
 
+        // Mock the main model for table name
+        $mockModel = Mockery::mock();
+        $mockModel->shouldReceive('getTable')
+            ->once()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->once()
+            ->andReturn($mockModel);
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
@@ -369,7 +402,7 @@ class LikeSearchStrategyTest extends OrchestraTestCase
             });
 
         $this->mockSubQuery->shouldReceive('orWhere')
-            ->with('name', 'like', '%'.$searchTerm.'%')
+            ->with('users.name', 'like', '%'.$searchTerm.'%')
             ->once();
 
         $result = $this->strategy->search($this->mockQuery, $filters, $config);

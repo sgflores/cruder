@@ -57,10 +57,27 @@ class SearchStrategyFeaturesTest extends TestCase
     {
         $strategy = new LikeSearchStrategy;
 
+        // Mock the main model for table name
+        $mockModel = Mockery::mock();
+        $mockModel->shouldReceive('getTable')
+            ->once()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->once()
+            ->andReturn($mockModel);
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
-            ->andReturn($this->mockQuery);
+            ->andReturnUsing(function ($callback) {
+                $mockSubQuery = Mockery::mock(Builder::class);
+                $mockSubQuery->shouldReceive('orWhere')
+                    ->with('users.name', 'like', '%test%')
+                    ->once();
+                $callback($mockSubQuery);
+                return $this->mockQuery;
+            });
 
         $config = [
             'direct_columns' => ['name'],
@@ -101,6 +118,16 @@ class SearchStrategyFeaturesTest extends TestCase
         $this->searchService->addStrategy($strategy1::key(), $strategy1);
         $this->searchService->addStrategy($strategy2::key(), $strategy2);
 
+        // Mock the main model for table name (in case term is present)
+        $mockModel = Mockery::mock();
+        $mockModel->shouldReceive('getTable')
+            ->zeroOrMoreTimes()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->zeroOrMoreTimes()
+            ->andReturn($mockModel);
+
         // This should work without throwing an exception
         $result = $this->searchService->search($strategy1::key(), $this->mockQuery, [], []);
         $this->assertInstanceOf(Builder::class, $result);
@@ -123,6 +150,16 @@ class SearchStrategyFeaturesTest extends TestCase
         $strategy = new LikeSearchStrategy;
         $this->searchService->addStrategy($strategy::key(), $strategy);
 
+        // Mock the main model for table name (in case term is present)
+        $mockModel = Mockery::mock();
+        $mockModel->shouldReceive('getTable')
+            ->zeroOrMoreTimes()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->zeroOrMoreTimes()
+            ->andReturn($mockModel);
+
         $filters = ['strategies' => ['like']];
 
         // This should not throw an exception
@@ -135,6 +172,16 @@ class SearchStrategyFeaturesTest extends TestCase
         $strategy = new LikeSearchStrategy;
         $this->searchService->addStrategy($strategy::key(), $strategy);
 
+        // Mock the main model for table name (in case term is present)
+        $mockModel = Mockery::mock();
+        $mockModel->shouldReceive('getTable')
+            ->zeroOrMoreTimes()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->zeroOrMoreTimes()
+            ->andReturn($mockModel);
+
         $filters = ['strategies' => 'like'];
 
         // This should not throw an exception
@@ -146,10 +193,27 @@ class SearchStrategyFeaturesTest extends TestCase
     {
         $strategy = new LikeSearchStrategy;
 
+        // Mock the main model for table name
+        $mockModel = Mockery::mock();
+        $mockModel->shouldReceive('getTable')
+            ->once()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->once()
+            ->andReturn($mockModel);
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
-            ->andReturn($this->mockQuery);
+            ->andReturnUsing(function ($callback) {
+                $mockSubQuery = Mockery::mock(Builder::class);
+                $mockSubQuery->shouldReceive('orWhere')
+                    ->with('users.name', 'like', '%test%')
+                    ->once();
+                $callback($mockSubQuery);
+                return $this->mockQuery;
+            });
 
         $config = [
             'direct_columns' => ['name'],
@@ -168,10 +232,27 @@ class SearchStrategyFeaturesTest extends TestCase
     {
         $strategy = new LikeSearchStrategy;
 
+        // Mock the main model for table name
+        $mockModel = Mockery::mock();
+        $mockModel->shouldReceive('getTable')
+            ->once()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->once()
+            ->andReturn($mockModel);
+
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
-            ->andReturn($this->mockQuery);
+            ->andReturnUsing(function ($callback) {
+                $mockSubQuery = Mockery::mock(Builder::class);
+                $mockSubQuery->shouldReceive('orWhere')
+                    ->with('users.name', 'like', '%test%')
+                    ->once();
+                $callback($mockSubQuery);
+                return $this->mockQuery;
+            });
 
         $config = [
             'direct_columns' => ['name'],

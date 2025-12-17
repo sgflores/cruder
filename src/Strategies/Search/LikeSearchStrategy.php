@@ -52,10 +52,30 @@ class LikeSearchStrategy implements SearchStrategyInterface
         $directColumns = $config['direct_columns'] ?? [];
         $relatedColumns = $config['related_columns'] ?? [];
 
-        $query->where(function (Builder $subQuery) use ($term, $directColumns, $relatedColumns) {
-            // Search direct columns
+        // Get the main model's table name to qualify direct columns and avoid ambiguity
+        // when joins are present (e.g., if both tables have a 'name' column)
+        // Only get model/table if we have direct columns to search
+        $mainTable = null;
+        if (!empty($directColumns)) {
+            $mainModel = $query->getModel();
+            $mainTable = $mainModel->getTable();
+        }
+
+        $query->where(function (Builder $subQuery) use ($term, $directColumns, $relatedColumns, $mainTable) {
+            // Search direct columns - qualify with main table name to avoid ambiguity
             foreach ($directColumns as $column) {
-                $subQuery->orWhere($column, 'like', '%'.$term.'%');
+                // Check if column is already qualified with table name
+                if (strpos($column, '.') !== false) {
+                    // Already qualified, use as-is
+                    $subQuery->orWhere($column, 'like', '%'.$term.'%');
+                } elseif ($mainTable !== null) {
+                    // Not qualified, qualify with main table name to prevent ambiguity
+                    $qualifiedColumn = "{$mainTable}.{$column}";
+                    $subQuery->orWhere($qualifiedColumn, 'like', '%'.$term.'%');
+                } else {
+                    // Fallback: use column as-is if mainTable is null (shouldn't happen, but safe)
+                    $subQuery->orWhere($column, 'like', '%'.$term.'%');
+                }
             }
 
             // Search related columns

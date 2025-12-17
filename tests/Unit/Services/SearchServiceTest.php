@@ -109,11 +109,64 @@ class SearchServiceTest extends UnitTestCase
     {
         $strategy = new LikeSearchStrategy;
 
+        // Mock the main model for table name
+        $mockMainModel = Mockery::mock();
+        $mockMainModel->shouldReceive('getTable')
+            ->once()
+            ->andReturn('users');
+
+        $this->mockQuery->shouldReceive('getModel')
+            ->once()
+            ->andReturn($mockMainModel);
+
+        // Mock for related columns
+        $mockModel = Mockery::mock();
+        $mockRelation = Mockery::mock();
+        $mockRelatedModel = Mockery::mock();
+
         // Set up mock expectations for the strategy
         $this->mockQuery->shouldReceive('where')
             ->once()
             ->with(Mockery::type('Closure'))
-            ->andReturn($this->mockQuery);
+            ->andReturnUsing(function ($callback) use ($mockModel, $mockRelation, $mockRelatedModel) {
+                $mockSubQuery = Mockery::mock(Builder::class);
+                
+                // Mock for direct columns
+                $mockSubQuery->shouldReceive('orWhere')
+                    ->with('users.name', 'like', '%test search%')
+                    ->once();
+                $mockSubQuery->shouldReceive('orWhere')
+                    ->with('users.email', 'like', '%test search%')
+                    ->once();
+
+                // Mock for related columns
+                $mockSubQuery->shouldReceive('getModel')
+                    ->once()
+                    ->andReturn($mockModel);
+                $mockModel->shouldReceive('department')
+                    ->once()
+                    ->andReturn($mockRelation);
+                $mockRelation->shouldReceive('getRelated')
+                    ->once()
+                    ->andReturn($mockRelatedModel);
+                $mockRelatedModel->shouldReceive('getTable')
+                    ->once()
+                    ->andReturn('departments');
+                $mockSubQuery->shouldReceive('orWhereHas')
+                    ->with('department', Mockery::type('Closure'))
+                    ->once()
+                    ->andReturnUsing(function ($relation, $relationCallback) {
+                        $mockRelationQuery = Mockery::mock(Builder::class);
+                        $mockRelationQuery->shouldReceive('where')
+                            ->with('departments.name', 'like', '%test search%')
+                            ->once();
+                        $relationCallback($mockRelationQuery);
+                        return $mockRelationQuery;
+                    });
+
+                $callback($mockSubQuery);
+                return $this->mockQuery;
+            });
 
         $this->service->addStrategy($strategy::key(), $strategy);
 
