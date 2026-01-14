@@ -161,6 +161,8 @@ class QueryLogger
             $logData['threshold_ms'] = config('cruder.query_logging.slow_query_threshold', 1000);
         }
 
+        $logData['raw_query'] = $this->bindQueryStrings($query);
+
         return $logData;
     }
 
@@ -201,7 +203,26 @@ class QueryLogger
             : config('cruder.query_logging.channels.default', 'single');
 
         // Combine message and data into a single structured log entry
-        $logData = array_merge(['message' => 'CRUD Query'], $data);
+        $logData = array_merge(['message' => 'Query'], $data);
         Log::channel($channel)->{$level}($logData);
     }
+
+    /**
+     * Parse eloquent query builder to string with bindings
+     *
+     * @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query
+     * @return string
+     */
+    protected function bindQueryStrings($query): string
+    {
+        $bindings = $query->getBindings();
+
+        return preg_replace_callback('/\?/', function ($match) use (&$bindings, $query) {
+            return $query->getConnection()->getPdo()->quote(array_shift($bindings));
+        }, $query->toSql());
+
+        // $addSlashes = str_replace('?', "'?'", $query->toSql());
+        // return vsprintf(str_replace('?', '%s', $addSlashes), $query->getBindings());
+    }
+
 }
