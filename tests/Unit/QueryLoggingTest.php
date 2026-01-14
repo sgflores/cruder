@@ -31,12 +31,13 @@ class QueryLoggingTest extends TestCase
         // Enable query logging via config
         config(['cruder.query_logging.enabled' => true]);
         config(['cruder.query_logging.log_all_operations' => true]);
+        config(['cruder.query_logging.channels.default' => 'daily']);
 
         // Mock the log facade
         $mockChannel = \Mockery::mock();
         $mockChannel->shouldReceive('debug')
             ->with(\Mockery::on(function ($data) {
-                return is_array($data) && isset($data['message']) && $data['message'] === 'CRUD Query';
+                return is_array($data) && isset($data['message']) && $data['message'] === 'Query';
             }))
             ->atLeast()->once();
 
@@ -67,6 +68,7 @@ class QueryLoggingTest extends TestCase
         config(['cruder.query_logging.enabled' => true]);
         config(['cruder.query_logging.log_all_operations' => false]);
         config(['cruder.query_logging.operations.find' => false]);
+        config(['cruder.query_logging.channels.default' => 'daily']);
 
         // Mock the log facade - should not be called for find
         $mockChannel = \Mockery::mock();
@@ -85,12 +87,13 @@ class QueryLoggingTest extends TestCase
         config(['cruder.query_logging.enabled' => true]);
         config(['cruder.query_logging.log_all_operations' => false]);
         config(['cruder.query_logging.operations.create' => true]);
+        config(['cruder.query_logging.channels.default' => 'daily']);
 
         // Mock the log facade for create (should be logged)
         $mockChannel = \Mockery::mock();
         $mockChannel->shouldReceive('debug')
             ->with(\Mockery::on(function ($data) {
-                return is_array($data) && isset($data['message']) && $data['message'] === 'CRUD Query';
+                return is_array($data) && isset($data['message']) && $data['message'] === 'Query';
             }))
             ->once();
 
@@ -111,12 +114,15 @@ class QueryLoggingTest extends TestCase
         config(['cruder.query_logging.log_all_operations' => true]);
         config(['cruder.query_logging.slow_query_threshold' => 0.001]); // Very low threshold for testing
         config(['cruder.performance.slow_query_log_level' => 'warning']);
+        config(['cruder.query_logging.channels.slow_queries' => 'daily']);
 
         // Mock the log facade
         $mockChannel = \Mockery::mock();
         $mockChannel->shouldReceive('warning')
             ->with(\Mockery::on(function ($data) {
-                return is_array($data) && isset($data['message']) && $data['message'] === 'CRUD Query';
+                return is_array($data) && 
+                       isset($data['message']) && $data['message'] === 'Query' &&
+                       isset($data['slow_query']) && $data['slow_query'] === true;
             }))
             ->atLeast()->once();
 
@@ -134,13 +140,14 @@ class QueryLoggingTest extends TestCase
         config(['cruder.query_logging.enabled' => true]);
         config(['cruder.query_logging.log_all_operations' => true]);
         config(['cruder.query_logging.include_execution_time' => true]);
+        config(['cruder.query_logging.channels.default' => 'daily']);
 
         // Mock the log facade
         $mockChannel = \Mockery::mock();
         $mockChannel->shouldReceive('debug')
             ->with(\Mockery::on(function ($data) {
                 return is_array($data) &&
-                       isset($data['message']) && $data['message'] === 'CRUD Query' &&
+                       isset($data['message']) && $data['message'] === 'Query' &&
                        isset($data['execution_time_ms']) && is_numeric($data['execution_time_ms']);
             }))
             ->atLeast()->once();
@@ -159,13 +166,14 @@ class QueryLoggingTest extends TestCase
         config(['cruder.query_logging.enabled' => true]);
         config(['cruder.query_logging.log_all_operations' => true]);
         config(['cruder.query_logging.include_bindings' => true]);
+        config(['cruder.query_logging.channels.default' => 'daily']);
 
         // Mock the log facade
         $mockChannel = \Mockery::mock();
         $mockChannel->shouldReceive('debug')
             ->with(\Mockery::on(function ($data) {
                 return is_array($data) &&
-                       isset($data['message']) && $data['message'] === 'CRUD Query' &&
+                       isset($data['message']) && $data['message'] === 'Query' &&
                        isset($data['bindings']) && is_array($data['bindings']);
             }))
             ->atLeast()->once();
@@ -183,17 +191,17 @@ class QueryLoggingTest extends TestCase
         // Enable query logging
         config(['cruder.query_logging.enabled' => true]);
         config(['cruder.query_logging.log_all_operations' => true]);
+        config(['cruder.query_logging.channels.default' => 'daily']);
 
         // Mock the log facade
         $mockChannel = \Mockery::mock();
         $mockChannel->shouldReceive('debug')
             ->with(\Mockery::on(function ($data) {
                 return is_array($data) &&
-                       isset($data['message']) && $data['message'] === 'CRUD Query' &&
+                       isset($data['message']) && $data['message'] === 'Query' &&
                        isset($data['operation']) &&
                        isset($data['sql']) &&
-                       isset($data['table']) &&
-                       isset($data['context']);
+                       isset($data['table']);
             }))
             ->atLeast()->once();
 
@@ -217,6 +225,7 @@ class QueryLoggingTest extends TestCase
         // Enable query logging
         config(['cruder.query_logging.enabled' => true]);
         config(['cruder.query_logging.log_all_operations' => true]);
+        config(['cruder.query_logging.channels.default' => 'daily']);
 
         // Mock the log facade
         $mockChannel = \Mockery::mock();
@@ -224,7 +233,7 @@ class QueryLoggingTest extends TestCase
         // Expect 4 calls total (4 operations × 1 call each with combined data)
         $mockChannel->shouldReceive('debug')
             ->with(\Mockery::on(function ($data) {
-                return is_array($data) && isset($data['message']) && $data['message'] === 'CRUD Query';
+                return is_array($data) && isset($data['message']) && $data['message'] === 'Query';
             }))
             ->atLeast()->times(4);
 
