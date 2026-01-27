@@ -1254,8 +1254,8 @@ abstract class BaseReaderService implements ReaderConfigurable
             return;
         }
         
-        $from = $this->normalizeBetweenValue($fromValue, $dateFormat);
-        $to = $this->normalizeBetweenValue($toValue, $dateFormat);
+        $from = $this->normalizeBetweenValue($fromValue, $dateFormat, true); // true = is start date
+        $to = $this->normalizeBetweenValue($toValue, $dateFormat, false); // false = is end date
 
         if ($from && $to) {
             $filters[$column] = [
@@ -1279,8 +1279,13 @@ abstract class BaseReaderService implements ReaderConfigurable
 
     /**
      * Normalize the between values (optionally formatting as dates).
+     * 
+     * @param mixed $value The value to normalize
+     * @param string|null $dateFormat Optional date format; when supplied, values are parsed via Carbon and formatted.
+     * @param bool $isStartDate If true, sets time to 00:00:00 for formats with time. If false, sets time to 23:59:59.
+     * @return mixed
      */
-    protected function normalizeBetweenValue(mixed $value, ?string $dateFormat = null): mixed
+    protected function normalizeBetweenValue(mixed $value, ?string $dateFormat = null, bool $isStartDate = true): mixed
     {
         if ($value === null || $value === '') {
             return null;
@@ -1291,7 +1296,25 @@ abstract class BaseReaderService implements ReaderConfigurable
         }
 
         try {
-            return Carbon::parse($value)->format($dateFormat);
+            $carbon = Carbon::parse($value);
+            
+            // Check if the format includes time components (H, i, s)
+            $hasTime = strpos($dateFormat, 'H') !== false || 
+                      strpos($dateFormat, 'h') !== false || 
+                      strpos($dateFormat, 'G') !== false || 
+                      strpos($dateFormat, 'g') !== false;
+            
+            if ($hasTime) {
+                if ($isStartDate) {
+                    // Set to start of day (00:00:00)
+                    $carbon->startOfDay();
+                } else {
+                    // Set to end of day (23:59:59)
+                    $carbon->endOfDay();
+                }
+            }
+            
+            return $carbon->format($dateFormat);
         } catch (Throwable $e) {
             return $value;
         }
