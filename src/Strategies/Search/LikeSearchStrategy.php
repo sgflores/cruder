@@ -101,35 +101,32 @@ class LikeSearchStrategy implements SearchStrategyInterface
 
     /**
      * Parses a relation column string to extract relation and column names.
+     * Supports two formats:
+     * - Dot: "relation.column" — split on first dot (e.g. invoice.invoice_series → invoice, invoice_series).
+     * - Underscore (no dot): "relation_column" — split on last underscore (e.g. department_name → department, name).
      *
      * @param  string  $columnString  The column string to parse
      * @return array Array with 'relation' and 'column' keys
      */
     private function parseRelationColumn(string $columnString): array
     {
-        // Find the last occurrence of either dot or underscore
-        $lastDotPos = strrpos($columnString, '.');
+        $dotPos = strpos($columnString, '.');
+
+        if ($dotPos !== false) {
+            return [
+                'relation' => substr($columnString, 0, $dotPos),
+                'column' => substr($columnString, $dotPos + 1),
+            ];
+        }
+
         $lastUnderscorePos = strrpos($columnString, '_');
-
-        // Determine which separator comes last
-        if ($lastDotPos === false && $lastUnderscorePos === false) {
-            return ['relation' => '', 'column' => $columnString];
+        if ($lastUnderscorePos !== false) {
+            return [
+                'relation' => substr($columnString, 0, $lastUnderscorePos),
+                'column' => substr($columnString, $lastUnderscorePos + 1),
+            ];
         }
 
-        if ($lastDotPos === false) {
-            $splitPos = $lastUnderscorePos;
-        } elseif ($lastUnderscorePos === false) {
-            $splitPos = $lastDotPos;
-        } else {
-            $splitPos = max($lastDotPos, $lastUnderscorePos);
-        }
-
-        $relation = substr($columnString, 0, $splitPos);
-        $column = substr($columnString, $splitPos + 1);
-
-        return [
-            'relation' => $relation,
-            'column' => $column,
-        ];
+        return ['relation' => '', 'column' => $columnString];
     }
 }
