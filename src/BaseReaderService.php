@@ -900,40 +900,33 @@ abstract class BaseReaderService implements ReaderConfigurable
 
     /**
      * Parses a relation column string to extract relation and column names.
+     * Supports two formats:
+     * - Dot: "relation.column" — split on first dot (e.g. invoice.branch_id → invoice, branch_id).
+     * - Underscore (no dot): "relation_column" — split on last underscore (e.g. department_id → department, id).
      *
      * @param  string  $columnString  The column string to parse
      * @return array Array with 'relation' and 'column' keys
      */
     protected function parseRelationColumn(string $columnString): array
     {
-        // Find the last occurrence of either dot or underscore
-        $lastDotPos = strrpos($columnString, '.');
+        $dotPos = strpos($columnString, '.');
+
+        if ($dotPos !== false) {
+            return [
+                'relation' => substr($columnString, 0, $dotPos),
+                'column' => substr($columnString, $dotPos + 1),
+            ];
+        }
+
         $lastUnderscorePos = strrpos($columnString, '_');
-
-        // Determine which separator comes last
-        if ($lastDotPos === false && $lastUnderscorePos === false) {
-            // No separators found, treat as direct column
-            return ['relation' => '', 'column' => $columnString];
+        if ($lastUnderscorePos !== false) {
+            return [
+                'relation' => substr($columnString, 0, $lastUnderscorePos),
+                'column' => substr($columnString, $lastUnderscorePos + 1),
+            ];
         }
 
-        if ($lastDotPos === false) {
-            // Only underscore found
-            $splitPos = $lastUnderscorePos;
-        } elseif ($lastUnderscorePos === false) {
-            // Only dot found
-            $splitPos = $lastDotPos;
-        } else {
-            // Both found, use the last one
-            $splitPos = max($lastDotPos, $lastUnderscorePos);
-        }
-
-        $relation = substr($columnString, 0, $splitPos);
-        $column = substr($columnString, $splitPos + 1);
-
-        return [
-            'relation' => $relation,
-            'column' => $column,
-        ];
+        return ['relation' => '', 'column' => $columnString];
     }
 
     /**
