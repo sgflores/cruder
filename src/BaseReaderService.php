@@ -779,11 +779,13 @@ abstract class BaseReaderService implements ReaderConfigurable
                     }
                 });
             } else {
-                // Direct column filter
+                // Direct column filter: qualify with main table to avoid ambiguity when query has joins (e.g. sort by related column)
+                $mainTable = $this->model->getTable();
+                $qualifiedColumn = "{$mainTable}.{$resolvedColumn}";
                 if (is_array($filterValue)) {
-                    $queryBuilder->whereIn($resolvedColumn, $filterValue);
+                    $queryBuilder->whereIn($qualifiedColumn, $filterValue);
                 } else {
-                    $queryBuilder->where($resolvedColumn, $filterValue);
+                    $queryBuilder->where($qualifiedColumn, $filterValue);
                 }
             }
         }
@@ -839,8 +841,9 @@ abstract class BaseReaderService implements ReaderConfigurable
                 ->orderBy("{$relatedTable}.{$relationParts['column']}", $sortDirection)
                 ->select("{$mainTable}.*");
         } else {
-            // Direct column sorting
-            $queryBuilder->orderBy($resolvedSortColumn, $sortDirection);
+            // Direct column sorting: qualify with main table to avoid ambiguity when query has joins
+            $mainTable = $this->model->getTable();
+            $queryBuilder->orderBy("{$mainTable}.{$resolvedSortColumn}", $sortDirection);
         }
     }
 
@@ -1043,8 +1046,10 @@ abstract class BaseReaderService implements ReaderConfigurable
                         $this->applyFilterOperatorToRelation($relationQuery, $qualifiedColumn, $operator, $value);
                     });
                 } else {
-                    // Direct column - apply directly
-                    $this->applyFilterOperator($queryBuilder, $resolvedColumn, $operator, $value);
+                    // Direct column: qualify with main table to avoid ambiguity when query has joins
+                    $mainTable = $this->model->getTable();
+                    $qualifiedColumn = "{$mainTable}.{$resolvedColumn}";
+                    $this->applyFilterOperator($queryBuilder, $qualifiedColumn, $operator, $value);
                 }
             }
         }
