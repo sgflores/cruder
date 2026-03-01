@@ -1399,6 +1399,15 @@ abstract class BaseReaderService implements ReaderConfigurable
     }
 
     /**
+     * Resolve a filter value to a boolean (for toggle flags like include_paid, include_void).
+     * Accepts true, false, 'true', 'false', '1', '0', 1, 0; null/undefined use $default.
+     */
+    protected static function resolveFilterBoolean(mixed $value, bool $default = false): bool
+    {
+        return (bool) filter_var($value ?? $default, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
      * Hook for applying custom (virtual/computed) filter columns.
      */
     protected function applyCustomFilterColumn(Builder $queryBuilder, string $columnName, mixed $filterValue): void
