@@ -1408,6 +1408,48 @@ abstract class BaseReaderService implements ReaderConfigurable
     }
 
     /**
+     * Resolve a filter value to a nullable boolean.
+     * Returns null when the value is empty or not a recognizable boolean token.
+     *
+     * Accepts:
+     * - true/false
+     * - 1/0
+     * - '1'/'0', 'true'/'false', 'yes'/'no', 'on'/'off' (case-insensitive)
+     */
+    protected static function resolveNullableFilterBoolean(mixed $value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            if ($value === 1) {
+                return true;
+            }
+            if ($value === 0) {
+                return false;
+            }
+
+            return null;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if ($normalized === '') {
+                return null;
+            }
+            if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+                return true;
+            }
+            if (in_array($normalized, ['0', 'false', 'no', 'off'], true)) {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Hook for applying custom (virtual/computed) filter columns.
      */
     protected function applyCustomFilterColumn(Builder $queryBuilder, string $columnName, mixed $filterValue): void
