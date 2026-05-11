@@ -2,11 +2,14 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use PHPUnit\Framework\Attributes\Test;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
 use SgFlores\Cruder\Tests\TestCase;
+use SgFlores\Cruder\Traits\PerformanceMonitoringTrait;
 
 class CacheTest extends TestCase
 {
@@ -32,7 +35,7 @@ class CacheTest extends TestCase
 
         $result = $this->userService->findAll();
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
     }
 
     #[Test]
@@ -51,7 +54,7 @@ class CacheTest extends TestCase
         // Instead, we'll test that the service works without cache
         $result = $noCacheService->findAll();
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
     }
 
     #[Test]
@@ -137,7 +140,7 @@ class CacheTest extends TestCase
         // by ensuring the result is paginated (which means cache was bypassed)
         $result = $this->userService->findAll(['per_page' => 10]);
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $result);
     }
 
     #[Test]
@@ -147,7 +150,7 @@ class CacheTest extends TestCase
         // by ensuring the result is a collection (which means cache was bypassed)
         $result = $this->userService->findAll(['limit' => 5]);
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
     }
 
     #[Test]
@@ -226,7 +229,7 @@ class CacheTest extends TestCase
         // Create a service that uses PerformanceMonitoringTrait
         $monitoringService = new class(new User) extends TestUserService
         {
-            use \SgFlores\Cruder\Traits\PerformanceMonitoringTrait;
+            use PerformanceMonitoringTrait;
         };
 
         // Mock cache to verify flush is called

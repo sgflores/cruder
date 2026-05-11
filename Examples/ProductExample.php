@@ -236,7 +236,7 @@ class ProductBusinessValidationStrategy implements ValidationStrategyInterface
 
             // Business rule: Product name must be unique within category
             if (isset($data['name']) && isset($data['category_id'])) {
-                $query = \App\Models\Product::where('name', $data['name'])
+                $query = Product::where('name', $data['name'])
                     ->where('category_id', $data['category_id']);
 
                 if ($operation === 'update' && isset($context['model'])) {

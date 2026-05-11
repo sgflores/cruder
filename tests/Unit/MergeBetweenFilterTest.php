@@ -12,10 +12,10 @@ class MergeBetweenFilterTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new TestReaderService();
+        $this->service = new TestReaderService;
     }
 
-    public function testAppliesBetweenOperatorWhenBothBoundsProvided(): void
+    public function test_applies_between_operator_when_both_bounds_provided(): void
     {
         $filters = [
             'from_date' => '2025-01-01',
@@ -36,7 +36,7 @@ class MergeBetweenFilterTest extends TestCase
         $this->assertArrayNotHasKey('to_date', $filters);
     }
 
-    public function testAppliesGreaterThanEqualWhenOnlyLowerBoundProvided(): void
+    public function test_applies_greater_than_equal_when_only_lower_bound_provided(): void
     {
         $filters = [
             'from_amount' => 100,
@@ -57,7 +57,7 @@ class MergeBetweenFilterTest extends TestCase
         $this->assertArrayNotHasKey('to_amount', $filters);
     }
 
-    public function testAppliesLessThanEqualWhenOnlyUpperBoundProvided(): void
+    public function test_applies_less_than_equal_when_only_upper_bound_provided(): void
     {
         $filters = [
             'from_amount' => null,
@@ -78,7 +78,7 @@ class MergeBetweenFilterTest extends TestCase
         $this->assertArrayNotHasKey('to_amount', $filters);
     }
 
-    public function testNoFilterAppliedWhenBoundsEmpty(): void
+    public function test_no_filter_applied_when_bounds_empty(): void
     {
         $filters = [
             'start' => null,
@@ -92,7 +92,7 @@ class MergeBetweenFilterTest extends TestCase
         $this->assertArrayNotHasKey('end', $filters);
     }
 
-    public function testFormatsDatesWhenFormatProvided(): void
+    public function test_formats_dates_when_format_provided(): void
     {
         $filters = [
             'from_date' => '2025-05-01 14:30:00',
@@ -110,5 +110,3 @@ class MergeBetweenFilterTest extends TestCase
         );
     }
 }
-
-

@@ -2,25 +2,25 @@
 
 namespace SgFlores\Cruder;
 
-use Throwable;
 use Carbon\Carbon;
-use InvalidArgumentException;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
-use SgFlores\Cruder\Services\QueryLogger;
+use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
+use SgFlores\Cruder\Contracts\ReaderConfigurable;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\ExportService;
+use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Services\SearchService;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Http\Resources\Json\JsonResource;
-use SgFlores\Cruder\Contracts\ReaderConfigurable;
 use SgFlores\Cruder\Traits\ReaderConfigurationTrait;
-use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Throwable;
 
 /**
  * Base Reader Service - Foundation for Read Operations
@@ -296,7 +296,7 @@ abstract class BaseReaderService implements ReaderConfigurable
             $this->queryLogger->logQuery('find', $query, $executionTime, [
                 'filters' => $filters,
                 'is_paginated' => $isPaginated,
-                'result_count' => $result instanceof \Illuminate\Support\Collection ? $result->count() : 'paginated',
+                'result_count' => $result instanceof Collection ? $result->count() : 'paginated',
             ]);
         }
 
@@ -757,10 +757,12 @@ abstract class BaseReaderService implements ReaderConfigurable
 
             // Validate column is in allowed filterable columns (security check)
             if (! in_array($resolvedColumn, $allowedColumns, true)) {
-                throw new InvalidArgumentException(
-                    "Filtered column '{$columnName}' is not declared in filterable columns. ".
-                    'Allowed columns: '.implode(', ', $allowedColumns)
-                );
+                // do not throw exception - just fail silently
+                continue;
+                // throw new InvalidArgumentException(
+                //     "Filtered column '{$columnName}' is not declared in filterable columns. ".
+                //     'Allowed columns: '.implode(', ', $allowedColumns)
+                // );
             }
 
             if ($this->isRelatedColumn($resolvedColumn)) {
@@ -818,10 +820,11 @@ abstract class BaseReaderService implements ReaderConfigurable
 
         // Validate sort column is in allowed sortable columns
         if (! in_array($resolvedSortColumn, $allowedColumns, true)) {
-            throw new InvalidArgumentException(
-                "Sort column '{$sortColumn}' is not declared in sortable columns. ".
-                'Allowed columns: '.implode(', ', $allowedColumns)
-            );
+            return;
+            // throw new InvalidArgumentException(
+            //     "Sort column '{$sortColumn}' is not declared in sortable columns. ".
+            //     'Allowed columns: '.implode(', ', $allowedColumns)
+            // );
         }
 
         if (! in_array($sortDirection, ['asc', 'desc'])) {
@@ -1026,9 +1029,11 @@ abstract class BaseReaderService implements ReaderConfigurable
 
             // Validate column is in allowed filterable columns
             if (! in_array($resolvedColumn, $allowedColumns, true)) {
-                throw new InvalidArgumentException(
-                    "Advanced filter column '{$columnName}' is not declared in filterable columns"
-                );
+                // do not throw exception - just fail silently
+                continue;
+                // throw new InvalidArgumentException(
+                //     "Advanced filter column '{$columnName}' is not declared in filterable columns"
+                // );
             }
 
             $operator = $filterValue['operator'];
@@ -1231,12 +1236,11 @@ abstract class BaseReaderService implements ReaderConfigurable
      * filter structure (between/gte/lte). Any original parameter keys used for from/to
      * are removed from the filters array.
      *
-     * @param  array   $filters    Filters array (modified by reference).
-     * @param  string  $column     Actual database column to apply the constraint on.
+     * @param  array  $filters  Filters array (modified by reference).
+     * @param  string  $column  Actual database column to apply the constraint on.
      * @param  string  $fromParam  Filter key containing the lower bound value.
-     * @param  string  $toParam    Filter key containing the upper bound value.
-     * @param  string|null $dateFormat Optional date format; when supplied, values are parsed via Carbon and formatted.
-     * @return void
+     * @param  string  $toParam  Filter key containing the upper bound value.
+     * @param  string|null  $dateFormat  Optional date format; when supplied, values are parsed via Carbon and formatted.
      */
     protected function mergeBetweenFilter(
         array &$filters,
@@ -1249,9 +1253,10 @@ abstract class BaseReaderService implements ReaderConfigurable
         $toValue = $filters[$toParam] ?? null;
         if (empty($fromValue) && empty($toValue)) {
             unset($filters[$fromParam], $filters[$toParam]);
+
             return;
         }
-        
+
         $from = $this->normalizeBetweenValue($fromValue, $dateFormat, true); // true = is start date
         $to = $this->normalizeBetweenValue($toValue, $dateFormat, false); // false = is end date
 
@@ -1277,11 +1282,10 @@ abstract class BaseReaderService implements ReaderConfigurable
 
     /**
      * Normalize the between values (optionally formatting as dates).
-     * 
-     * @param mixed $value The value to normalize
-     * @param string|null $dateFormat Optional date format; when supplied, values are parsed via Carbon and formatted.
-     * @param bool $isStartDate If true, sets time to 00:00:00 for formats with time. If false, sets time to 23:59:59.
-     * @return mixed
+     *
+     * @param  mixed  $value  The value to normalize
+     * @param  string|null  $dateFormat  Optional date format; when supplied, values are parsed via Carbon and formatted.
+     * @param  bool  $isStartDate  If true, sets time to 00:00:00 for formats with time. If false, sets time to 23:59:59.
      */
     protected function normalizeBetweenValue(mixed $value, ?string $dateFormat = null, bool $isStartDate = true): mixed
     {
@@ -1295,13 +1299,13 @@ abstract class BaseReaderService implements ReaderConfigurable
 
         try {
             $carbon = Carbon::parse($value);
-            
+
             // Check if the format includes time components (H, i, s)
-            $hasTime = strpos($dateFormat, 'H') !== false || 
-                      strpos($dateFormat, 'h') !== false || 
-                      strpos($dateFormat, 'G') !== false || 
+            $hasTime = strpos($dateFormat, 'H') !== false ||
+                      strpos($dateFormat, 'h') !== false ||
+                      strpos($dateFormat, 'G') !== false ||
                       strpos($dateFormat, 'g') !== false;
-            
+
             if ($hasTime) {
                 if ($isStartDate) {
                     // Set to start of day (00:00:00)
@@ -1311,7 +1315,7 @@ abstract class BaseReaderService implements ReaderConfigurable
                     $carbon->endOfDay();
                 }
             }
-            
+
             return $carbon->format($dateFormat);
         } catch (Throwable $e) {
             return $value;
@@ -1330,33 +1334,33 @@ abstract class BaseReaderService implements ReaderConfigurable
      * @param  string  $fromParam  Filter key to set for the start of month.
      * @param  string  $toParam  Filter key to set for the end of month.
      * @param  string|null  $dateFormat  Optional date format; when supplied, values are formatted accordingly (default: 'Y-m-d').
-     * @return void
      */
     protected function normalizeMonthFilter(
         array &$filters,
-        string $monthParam = 'month',
+        string $monthParam,
         string $fromParam,
         string $toParam,
         ?string $dateFormat = 'Y-m-d'
     ): void {
         $monthValue = $filters[$monthParam] ?? null;
-        
+
         if (empty($monthValue)) {
             // Remove the month parameter even if it's empty
             unset($filters[$monthParam]);
+
             return;
         }
 
         try {
             // Parse the month input (handles formats like "2025-11-01", "2025-11", etc.)
             $date = Carbon::parse($monthValue);
-            
+
             // Set from parameter to start of month
             $filters[$fromParam] = $date->copy()->startOfMonth()->format($dateFormat);
-            
+
             // Set to parameter to end of month
             $filters[$toParam] = $date->copy()->endOfMonth()->format($dateFormat);
-            
+
             // Remove the month parameter from filters
             unset($filters[$monthParam]);
         } catch (Throwable $e) {

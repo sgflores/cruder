@@ -4,6 +4,7 @@ namespace SgFlores\Cruder\Tests\Unit;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use SgFlores\Cruder\Services\QueryLogger;
 use SgFlores\Cruder\Tests\Models\Department;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
@@ -120,7 +121,7 @@ class QueryLoggingTest extends TestCase
         $mockChannel = \Mockery::mock();
         $mockChannel->shouldReceive('warning')
             ->with(\Mockery::on(function ($data) {
-                return is_array($data) && 
+                return is_array($data) &&
                        isset($data['message']) && $data['message'] === 'Query' &&
                        isset($data['slow_query']) && $data['slow_query'] === true;
             }))
@@ -217,7 +218,7 @@ class QueryLoggingTest extends TestCase
     {
         $queryLogger = $this->userService->getQueryLogger();
 
-        $this->assertInstanceOf(\SgFlores\Cruder\Services\QueryLogger::class, $queryLogger);
+        $this->assertInstanceOf(QueryLogger::class, $queryLogger);
     }
 
     public function test_query_logging_works_for_all_crud_operations(): void

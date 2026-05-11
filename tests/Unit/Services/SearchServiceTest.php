@@ -130,7 +130,7 @@ class SearchServiceTest extends UnitTestCase
             ->with(Mockery::type('Closure'))
             ->andReturnUsing(function ($callback) use ($mockModel, $mockRelation, $mockRelatedModel) {
                 $mockSubQuery = Mockery::mock(Builder::class);
-                
+
                 // Mock for direct columns
                 $mockSubQuery->shouldReceive('orWhere')
                     ->with('users.name', 'like', '%test search%')
@@ -161,10 +161,12 @@ class SearchServiceTest extends UnitTestCase
                             ->with('departments.name', 'like', '%test search%')
                             ->once();
                         $relationCallback($mockRelationQuery);
+
                         return $mockRelationQuery;
                     });
 
                 $callback($mockSubQuery);
+
                 return $this->mockQuery;
             });
 

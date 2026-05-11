@@ -210,8 +210,7 @@ class QueryLogger
     /**
      * Parse eloquent query builder to string with bindings
      *
-     * @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query
-     * @return string
+     * @param  Builder|\Illuminate\Database\Query\Builder  $query
      */
     protected function bindQueryStrings($query): string
     {
@@ -224,5 +223,4 @@ class QueryLogger
         // $addSlashes = str_replace('?', "'?'", $query->toSql());
         // return vsprintf(str_replace('?', '%s', $addSlashes), $query->getBindings());
     }
-
 }

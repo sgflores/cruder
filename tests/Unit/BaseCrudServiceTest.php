@@ -2,6 +2,7 @@
 
 namespace SgFlores\Cruder\Tests\Unit;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use PHPUnit\Framework\Attributes\Test;
@@ -243,7 +244,7 @@ class BaseCrudServiceTest extends TestCase
 
         $paginatedUsers = $this->userService->findAll(['per_page' => 3]);
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $paginatedUsers);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginatedUsers);
         $this->assertEquals(3, $paginatedUsers->perPage());
         $this->assertEquals(6, $paginatedUsers->total()); // 5 new + 1 existing
         $this->assertCount(3, $paginatedUsers->items());

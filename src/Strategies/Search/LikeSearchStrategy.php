@@ -56,7 +56,7 @@ class LikeSearchStrategy implements SearchStrategyInterface
         // when joins are present (e.g., if both tables have a 'name' column)
         // Only get model/table if we have direct columns to search
         $mainTable = null;
-        if (!empty($directColumns)) {
+        if (! empty($directColumns)) {
             $mainModel = $query->getModel();
             $mainTable = $mainModel->getTable();
         }

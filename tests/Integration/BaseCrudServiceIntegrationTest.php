@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use SgFlores\Cruder\Exceptions\ValidationException;
 use SgFlores\Cruder\Tests\Models\Department;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
@@ -248,7 +249,7 @@ class BaseCrudServiceIntegrationTest extends TestCase
     public function test_error_handling_and_graceful_degradation(): void
     {
         // Test validation errors
-        $this->expectException(\SgFlores\Cruder\Exceptions\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
         $validationRules = [
             'name' => 'required|string|max:255',

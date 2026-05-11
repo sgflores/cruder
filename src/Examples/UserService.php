@@ -3,6 +3,7 @@
 namespace SgFlores\Cruder\Examples;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 use SgFlores\Cruder\BaseCrudService;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\ValidationService;
@@ -225,7 +226,7 @@ class UserService extends BaseCrudService
     /**
      * Find users by department.
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function findByDepartment(int $departmentId, array $filters = [])
     {
@@ -237,7 +238,7 @@ class UserService extends BaseCrudService
     /**
      * Find active users.
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function findActiveUsers(array $filters = [])
     {
@@ -249,7 +250,7 @@ class UserService extends BaseCrudService
     /**
      * Search users by name or email.
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function searchUsers(string $term, array $filters = [])
     {

@@ -3,6 +3,8 @@
 namespace SgFlores\Cruder\Tests\Unit;
 
 use PHPUnit\Framework\Attributes\Test;
+use SgFlores\Cruder\Contracts\CrudConfigurable;
+use SgFlores\Cruder\Contracts\ReaderConfigurable;
 use SgFlores\Cruder\Tests\Models\User;
 use SgFlores\Cruder\Tests\Services\TestUserService;
 use SgFlores\Cruder\Tests\TestCase;
@@ -93,7 +95,7 @@ class ConfigurationTraitTest extends TestCase
     public function it_implements_configurable_interfaces(): void
     {
         // Test that the service implements the configurable interfaces
-        $this->assertInstanceOf(\SgFlores\Cruder\Contracts\ReaderConfigurable::class, $this->userService);
-        $this->assertInstanceOf(\SgFlores\Cruder\Contracts\CrudConfigurable::class, $this->userService);
+        $this->assertInstanceOf(ReaderConfigurable::class, $this->userService);
+        $this->assertInstanceOf(CrudConfigurable::class, $this->userService);
     }
 }

@@ -128,7 +128,7 @@ class ExportServiceTest extends UnitTestCase
         $strategy->shouldReceive('export')
             ->once()
             ->with(Mockery::on(function ($data) {
-                return $data instanceof \Illuminate\Support\Collection && $data->isEmpty();
+                return $data instanceof Collection && $data->isEmpty();
             }), [])
             ->andReturn('');
 
@@ -241,7 +241,7 @@ class ExportServiceTest extends UnitTestCase
         $strategy->shouldReceive('export')
             ->once()
             ->with(Mockery::on(function ($data) {
-                return $data instanceof \Illuminate\Support\Collection && $data->isEmpty();
+                return $data instanceof Collection && $data->isEmpty();
             }), [])
             ->andReturn('empty data exported');
 
