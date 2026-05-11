@@ -76,6 +76,7 @@ class SearchStrategyFeaturesTest extends TestCase
                     ->with('users.name', 'like', '%test%')
                     ->once();
                 $callback($mockSubQuery);
+
                 return $this->mockQuery;
             });
 
@@ -212,6 +213,7 @@ class SearchStrategyFeaturesTest extends TestCase
                     ->with('users.name', 'like', '%test%')
                     ->once();
                 $callback($mockSubQuery);
+
                 return $this->mockQuery;
             });
 
@@ -251,6 +253,7 @@ class SearchStrategyFeaturesTest extends TestCase
                     ->with('users.name', 'like', '%test%')
                     ->once();
                 $callback($mockSubQuery);
+
                 return $this->mockQuery;
             });
 

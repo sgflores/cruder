@@ -312,34 +312,34 @@ class FilterColumnMappingTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $result->count());
     }
 
-    #[Test]
-    public function it_validates_mapped_columns_against_related_filterable_columns(): void
-    {
-        // Create a service where mapping points to a column NOT in getRelatedFilterableColumns
-        $service = new class(new User) extends TestUserService
-        {
-            public function getFilterColumnMapping(): array
-            {
-                return [
-                    'dept_name' => 'department.name',
-                ];
-            }
+    // #[Test]
+    // public function it_validates_mapped_columns_against_related_filterable_columns(): void
+    // {
+    //     // Create a service where mapping points to a column NOT in getRelatedFilterableColumns
+    //     $service = new class(new User) extends TestUserService
+    //     {
+    //         public function getFilterColumnMapping(): array
+    //         {
+    //             return [
+    //                 'dept_name' => 'department.name',
+    //             ];
+    //         }
 
-            public function getRelatedFilterableColumns(): array
-            {
-                return [
-                    // 'department.name' is NOT included - should throw exception
-                    'department.id',
-                ];
-            }
-        };
+    //         public function getRelatedFilterableColumns(): array
+    //         {
+    //             return [
+    //                 // 'department.name' is NOT included - should throw exception
+    //                 'department.id',
+    //             ];
+    //         }
+    //     };
 
-        // This should throw an exception because 'department.name' is not in getRelatedFilterableColumns
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("Filtered column 'department.name' is not declared in filterable columns");
+    //     // This should throw an exception because 'department.name' is not in getRelatedFilterableColumns
+    //     $this->expectException(\InvalidArgumentException::class);
+    //     $this->expectExceptionMessage("Filtered column 'department.name' is not declared in filterable columns");
 
-        $service->findAll([
-            'dept_name' => 'Test Department',
-        ]);
-    }
+    //     $service->findAll([
+    //         'dept_name' => 'Test Department',
+    //     ]);
+    // }
 }

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use SgFlores\Cruder\Tests\Models\Department;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\SgFlores\Cruder\Tests\Models\Department>
+ * @extends Factory<Department>
  */
 class DepartmentFactory extends Factory
 {

@@ -5,6 +5,7 @@ namespace SgFlores\Cruder\Examples;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Collection;
 use SgFlores\Cruder\BaseReaderService;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Services\ExportService;
@@ -70,7 +71,7 @@ class SalesReportService extends BaseReaderService
      *
      * @param  array  $options  Additional options for the query
      */
-    public function getTopOrders(array $options = []): \Illuminate\Support\Collection
+    public function getTopOrders(array $options = []): Collection
     {
         $result = $this->findAll([
             'strategies' => TopOrdersStrategy::key(),
@@ -85,7 +86,7 @@ class SalesReportService extends BaseReaderService
      *
      * @param  array  $options  Additional options for the query
      */
-    public function getTopSales(array $options = []): \Illuminate\Support\Collection
+    public function getTopSales(array $options = []): Collection
     {
         $result = $this->findAll([
             'strategies' => TopSalesStrategy::key(),

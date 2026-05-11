@@ -5,6 +5,7 @@ namespace SgFlores\Cruder\Tests\Unit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use PHPUnit\Framework\Attributes\Test;
+use SgFlores\Cruder\BaseCrudService;
 use SgFlores\Cruder\Services\EventService;
 use SgFlores\Cruder\Tests\Models\Department;
 use SgFlores\Cruder\Tests\Models\User;
@@ -64,7 +65,7 @@ class EventServiceValidationTest extends TestCase
     public function it_works_without_event_service_provided()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User) extends \SgFlores\Cruder\BaseCrudService
+        $serviceWithoutEvents = new class(new User) extends BaseCrudService
         {
             public function __construct(User $user)
             {
@@ -132,7 +133,7 @@ class EventServiceValidationTest extends TestCase
     public function it_throws_exception_when_adding_event_listener_without_event_service()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User) extends \SgFlores\Cruder\BaseCrudService
+        $serviceWithoutEvents = new class(new User) extends BaseCrudService
         {
             public function __construct(User $user)
             {
@@ -192,7 +193,7 @@ class EventServiceValidationTest extends TestCase
     public function it_returns_null_event_service_when_not_provided()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User) extends \SgFlores\Cruder\BaseCrudService
+        $serviceWithoutEvents = new class(new User) extends BaseCrudService
         {
             public function __construct(User $user)
             {
@@ -253,7 +254,7 @@ class EventServiceValidationTest extends TestCase
     public function it_handles_bulk_operations_without_event_service()
     {
         // Create a service without EventService
-        $serviceWithoutEvents = new class(new User) extends \SgFlores\Cruder\BaseCrudService
+        $serviceWithoutEvents = new class(new User) extends BaseCrudService
         {
             public function __construct(User $user)
             {

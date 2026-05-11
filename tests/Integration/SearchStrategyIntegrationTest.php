@@ -2,6 +2,7 @@
 
 namespace SgFlores\Cruder\Tests\Integration;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Auth;
@@ -100,7 +101,7 @@ class SearchStrategyIntegrationTest extends TestCase
             'per_page' => 5,
         ]);
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $paginatedResults);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginatedResults);
         $this->assertEquals(5, $paginatedResults->perPage());
         $this->assertEquals(10, $paginatedResults->total());
         $this->assertCount(5, $paginatedResults->items());

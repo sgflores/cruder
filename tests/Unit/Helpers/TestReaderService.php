@@ -12,8 +12,10 @@ class TestReaderService extends BaseReaderService
 {
     public function __construct()
     {
-        parent::__construct(new class extends Model {
+        parent::__construct(new class extends Model
+        {
             protected $table = 'test_models';
+
             public $timestamps = false;
         });
     }
@@ -39,4 +41,3 @@ class TestReaderService extends BaseReaderService
         $this->normalizeMonthFilter($filters, $monthParam, $fromParam, $toParam, $dateFormat);
     }
 }
-

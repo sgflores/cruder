@@ -3,13 +3,14 @@
 namespace SgFlores\Cruder\Tests;
 
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use SgFlores\Cruder\CruderServiceProvider;
 
 abstract class UnitTestCase extends OrchestraTestCase
 {
     protected function getPackageProviders($app): array
     {
         return [
-            \SgFlores\Cruder\CruderServiceProvider::class,
+            CruderServiceProvider::class,
         ];
     }
 

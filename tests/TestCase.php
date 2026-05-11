@@ -5,6 +5,7 @@ namespace SgFlores\Cruder\Tests;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use SgFlores\Cruder\CruderServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
 {
@@ -34,7 +35,7 @@ abstract class TestCase extends OrchestraTestCase
     protected function getPackageProviders($app): array
     {
         return [
-            \SgFlores\Cruder\CruderServiceProvider::class,
+            CruderServiceProvider::class,
         ];
     }
 

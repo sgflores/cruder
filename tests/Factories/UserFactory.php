@@ -7,7 +7,7 @@ use SgFlores\Cruder\Tests\Models\Department;
 use SgFlores\Cruder\Tests\Models\User;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\SgFlores\Cruder\Tests\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {

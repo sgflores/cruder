@@ -12,10 +12,10 @@ class NormalizeMonthFilterTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new TestReaderService();
+        $this->service = new TestReaderService;
     }
 
-    public function testConvertsMonthToStartAndEndOfMonth(): void
+    public function test_converts_month_to_start_and_end_of_month(): void
     {
         $filters = [
             'month' => '2025-11',
@@ -30,7 +30,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertArrayNotHasKey('month', $filters);
     }
 
-    public function testHandlesMonthWithDayInput(): void
+    public function test_handles_month_with_day_input(): void
     {
         $filters = [
             'month' => '2025-11-15',
@@ -43,7 +43,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertArrayNotHasKey('month', $filters);
     }
 
-    public function testHandlesMonthWithFirstDayInput(): void
+    public function test_handles_month_with_first_day_input(): void
     {
         $filters = [
             'month' => '2025-11-01',
@@ -55,7 +55,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertEquals('2025-11-30', $filters['date_to']);
     }
 
-    public function testHandlesFebruaryLeapYear(): void
+    public function test_handles_february_leap_year(): void
     {
         $filters = [
             'month' => '2024-02',
@@ -67,7 +67,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertEquals('2024-02-29', $filters['date_to']); // Leap year
     }
 
-    public function testHandlesFebruaryNonLeapYear(): void
+    public function test_handles_february_non_leap_year(): void
     {
         $filters = [
             'month' => '2025-02',
@@ -79,7 +79,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertEquals('2025-02-28', $filters['date_to']); // Non-leap year
     }
 
-    public function testHandlesMonthsWith31Days(): void
+    public function test_handles_months_with31_days(): void
     {
         $filters = [
             'month' => '2025-01',
@@ -91,7 +91,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertEquals('2025-01-31', $filters['date_to']);
     }
 
-    public function testHandlesMonthsWith30Days(): void
+    public function test_handles_months_with30_days(): void
     {
         $filters = [
             'month' => '2025-04',
@@ -103,7 +103,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertEquals('2025-04-30', $filters['date_to']);
     }
 
-    public function testNoFilterAppliedWhenMonthEmpty(): void
+    public function test_no_filter_applied_when_month_empty(): void
     {
         $filters = [
             'month' => null,
@@ -116,7 +116,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertArrayNotHasKey('month', $filters);
     }
 
-    public function testNoFilterAppliedWhenMonthIsEmptyString(): void
+    public function test_no_filter_applied_when_month_is_empty_string(): void
     {
         $filters = [
             'month' => '',
@@ -129,7 +129,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertArrayNotHasKey('month', $filters);
     }
 
-    public function testNoFilterAppliedWhenMonthNotProvided(): void
+    public function test_no_filter_applied_when_month_not_provided(): void
     {
         $filters = [];
 
@@ -139,7 +139,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertArrayNotHasKey('date_to', $filters);
     }
 
-    public function testHandlesInvalidMonthFormat(): void
+    public function test_handles_invalid_month_format(): void
     {
         $filters = [
             'month' => 'invalid-date',
@@ -154,7 +154,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertArrayNotHasKey('month', $filters);
     }
 
-    public function testUsesCustomDateFormat(): void
+    public function test_uses_custom_date_format(): void
     {
         $filters = [
             'month' => '2025-11',
@@ -166,7 +166,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertEquals('2025/11/30', $filters['date_to']);
     }
 
-    public function testUsesCustomParameterNames(): void
+    public function test_uses_custom_parameter_names(): void
     {
         $filters = [
             'period' => '2025-11',
@@ -181,7 +181,7 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertArrayNotHasKey('period', $filters);
     }
 
-    public function testHandlesDifferentMonthParamName(): void
+    public function test_handles_different_month_param_name(): void
     {
         $filters = [
             'invoice_month' => '2025-12',
@@ -194,4 +194,3 @@ class NormalizeMonthFilterTest extends TestCase
         $this->assertArrayNotHasKey('invoice_month', $filters);
     }
 }
-
