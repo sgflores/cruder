@@ -71,8 +71,8 @@ use Throwable;
  * - `getDirectTextSearchColumns()`: Direct database columns for text search
  * - `getRelatedTextSearchColumns()`: Related model columns for text search
  *
- * Attempting to use undeclared columns will throw an `InvalidArgumentException`
- * with a helpful error message listing the allowed columns.
+     * Attempting to use undeclared columns for filtering will throw an `InvalidArgumentException`.
+     * Invalid sort columns fall back to {@see getDefaultSortColumn()} instead of failing the request.
  *
  * ## Usage Example
  *
@@ -799,11 +799,11 @@ abstract class BaseReaderService implements ReaderConfigurable
      * @param  Builder  $queryBuilder  The Eloquent query builder instance
      * @param  array  $queryOptions  Array containing sortBy and sortDirection parameters
      *
-     * @throws InvalidArgumentException If an invalid column is used for sorting
+     * Invalid sort columns fall back to the service default instead of throwing.
      */
     protected function applySorting(Builder $queryBuilder, array $queryOptions): void
     {
-        $sortColumn = $queryOptions[$this->getSortByParam()] ?? $this->getDefaultSortColumn();
+        $sortColumn = $queryOptions[$this->getSortByParam()] ?? $this->resolveDefaultSortColumn();
         $sortDirection = $queryOptions[$this->getSortDirectionParam()] ?? $this->getDefaultSortDirection();
 
         if (is_array($sortColumn) || is_array($sortDirection)) {
@@ -818,13 +818,15 @@ abstract class BaseReaderService implements ReaderConfigurable
             $this->getRelatedSortableColumns()
         );
 
-        // Validate sort column is in allowed sortable columns
         if (! in_array($resolvedSortColumn, $allowedColumns, true)) {
-            return;
-            // throw new InvalidArgumentException(
-            //     "Sort column '{$sortColumn}' is not declared in sortable columns. ".
-            //     'Allowed columns: '.implode(', ', $allowedColumns)
-            // );
+            $defaultSortColumn = $this->resolveDefaultSortColumn();
+            $resolvedSortColumn = $this->resolveMappedColumn($defaultSortColumn);
+
+            if (! in_array($resolvedSortColumn, $allowedColumns, true)) {
+                return;
+            }
+
+            $sortColumn = $defaultSortColumn;
         }
 
         if (! in_array($sortDirection, ['asc', 'desc'])) {
@@ -848,6 +850,19 @@ abstract class BaseReaderService implements ReaderConfigurable
             $mainTable = $this->model->getTable();
             $queryBuilder->orderBy("{$mainTable}.{$resolvedSortColumn}", $sortDirection);
         }
+    }
+
+    /**
+     * Resolves the default sort column for this reader.
+     * Child services may define {@see getDefaultSortBy()} instead of overriding {@see getDefaultSortColumn()}.
+     */
+    protected function resolveDefaultSortColumn(): string
+    {
+        if (method_exists($this, 'getDefaultSortBy')) {
+            return $this->getDefaultSortBy();
+        }
+
+        return $this->getDefaultSortColumn();
     }
 
     // ========================================================================
